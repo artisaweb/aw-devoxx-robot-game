@@ -45,10 +45,8 @@ export const BELGIAN_PROVINCES = [
   'Namur',
 ];
 
-// Kiosk label/status copy (see vendingMachine.ts's createVendingMachine(),
-// createCandyMachine(), createWifiKiosk()).
+// Kiosk label/status copy (see vendingMachine.ts's createWifiKiosk() — JAVA
+// and CANDY now build their own labels internally, see src/props/).
 export const KIOSK_SIGNAGE = {
-  java: { label: 'JAVA', availableLabel: 'AVAILABLE', unavailableLabel: 'OUT OF STOCK' },
-  candy: { label: 'CANDY', availableLabel: 'AVAILABLE', unavailableLabel: 'OUT OF STOCK' },
   wifi: { label: 'WIFI', availableLabel: 'CONNECTED', unavailableLabel: 'NO SIGNAL' },
 };

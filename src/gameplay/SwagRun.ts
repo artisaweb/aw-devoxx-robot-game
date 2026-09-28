@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { HALL_WIDTH, HALL_DEPTH, Collider, BOOTH_PLATFORM_ZONES } from '../scene/ExhibitionHall';
 import { KING_KIOSK_POS, BEER_TAP_POS, BEER_TAP_COLLIDER_RADIUS } from '../scene/sponsorBooths';
+import { BeerTap } from '../props/beerTap';
 import { Robot, WALL_CLEARANCE } from '../entities/Robot';
 import { SwagType, createWorldSwagItem, createWornAccessory, HALO_BASE_SIZE } from './swagAccessories';
 import { AttendeeArchetype, createAttendeeMesh } from './attendeeModels';
-import { createVendingMachine, createCandyMachine, Kiosk, KIOSK_COLLIDER_RADIUS } from './vendingMachine';
+import { createVendingMachine, createCandyMachine, KIOSK_COLLIDER_RADIUS, CoffeeVendingMachine, CandyGrabbingMachine } from './vendingMachine';
 import { createSpeechBubble, SpeechBubble } from './speechBubble';
 import { randomGripe, randomHitReaction } from '../text/attendeeDialogue';
 
@@ -250,9 +251,9 @@ function reflectHeadingOffNormal(heading: number, nx: number, nz: number): numbe
 export class SwagRun {
   readonly group = new THREE.Group();
   private pickups: Pickup[] = [];
-  private coffeeMachine: Kiosk;
+  private coffeeMachine: CoffeeVendingMachine;
   private coffeeCooldown = 0;
-  private candyMachine: Kiosk;
+  private candyMachine: CandyGrabbingMachine;
   private candyCooldown = 0;
   private beerTapCooldown = 0;
   private hazards: Hazard[] = [];
@@ -280,12 +281,12 @@ export class SwagRun {
     }
 
     this.coffeeMachine = createVendingMachine();
-    this.coffeeMachine.group.position.set(COFFEE_MACHINE_POS[0], 0, COFFEE_MACHINE_POS[1]);
-    this.group.add(this.coffeeMachine.group);
+    this.coffeeMachine.object.position.set(COFFEE_MACHINE_POS[0], 0, COFFEE_MACHINE_POS[1]);
+    this.group.add(this.coffeeMachine.object);
 
     this.candyMachine = createCandyMachine();
-    this.candyMachine.group.position.set(KING_KIOSK_POS[0], 0, KING_KIOSK_POS[1]);
-    this.group.add(this.candyMachine.group);
+    this.candyMachine.object.position.set(KING_KIOSK_POS[0], 0, KING_KIOSK_POS[1]);
+    this.group.add(this.candyMachine.object);
 
     for (const [x, z, heading, archetype] of HAZARD_START) {
       const mesh = createAttendeeMesh(archetype);
@@ -321,7 +322,7 @@ export class SwagRun {
   }
 
   /** Advances the round — returns whether the robot was just splashed by a hazard, and whether a pickup was just collected (for the SFX layer, see Game.ts). */
-  update(dt: number, robot: Robot, colliders: Collider[]): { stunned: boolean; pickedUp: boolean } {
+  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stunned: boolean; pickedUp: boolean } {
     if (this.finished) return { stunned: false, pickedUp: false };
 
     this.timeRemaining = Math.max(0, this.timeRemaining - dt);
@@ -372,21 +373,27 @@ export class SwagRun {
       return { stunned: false, pickedUp };
     }
 
+    this.coffeeMachine.update(dt);
     this.coffeeCooldown = Math.max(0, this.coffeeCooldown - dt);
     const coffeeAvailable = this.coffeeCooldown <= 0;
-    this.coffeeMachine.setAvailable(coffeeAvailable);
+    this.coffeeMachine.setOutOfStock(!coffeeAvailable);
     if (coffeeAvailable) {
       const dx = robotX - COFFEE_MACHINE_POS[0];
       const dz = robotZ - COFFEE_MACHINE_POS[1];
       if (dx * dx + dz * dz < COFFEE_RADIUS * COFFEE_RADIUS) {
         robot.restoreEnergy(COFFEE_BOOST);
         this.coffeeCooldown = COFFEE_COOLDOWN;
+        // Fire-and-forget — the energy restore above is immediate, matching
+        // the existing arcade-quick refuel feel; the brew animation (~10s)
+        // is purely a visual flourish, not gated on gameplay.
+        if (!this.coffeeMachine.busy) void this.coffeeMachine.activate();
       }
     }
 
+    this.candyMachine.update(dt);
     this.candyCooldown = Math.max(0, this.candyCooldown - dt);
     const candyAvailable = this.candyCooldown <= 0;
-    this.candyMachine.setAvailable(candyAvailable);
+    this.candyMachine.setOutOfStock(!candyAvailable);
     if (candyAvailable) {
       const dx = robotX - KING_KIOSK_POS[0];
       const dz = robotZ - KING_KIOSK_POS[1];
@@ -394,16 +401,20 @@ export class SwagRun {
         robot.restoreEnergy(CANDY_ENERGY_BOOST);
         this.timeRemaining += CANDY_TIME_BONUS;
         this.candyCooldown = CANDY_COOLDOWN;
+        if (!this.candyMachine.busy) void this.candyMachine.activate();
       }
     }
 
     this.beerTapCooldown = Math.max(0, this.beerTapCooldown - dt);
-    if (this.beerTapCooldown <= 0) {
+    const beerTapAvailable = this.beerTapCooldown <= 0;
+    beerTap.setOutOfStock(!beerTapAvailable);
+    if (beerTapAvailable) {
       const dx = robotX - BEER_TAP_POS[0];
       const dz = robotZ - BEER_TAP_POS[1];
       if (dx * dx + dz * dz < BEER_TAP_RADIUS * BEER_TAP_RADIUS) {
         robot.applyTipsy(BEER_TAP_TIPSY_DURATION);
         this.beerTapCooldown = BEER_TAP_COOLDOWN;
+        if (!beerTap.busy) void beerTap.activate();
       }
     }
 

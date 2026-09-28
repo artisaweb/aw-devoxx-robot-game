@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { KIOSK_SIGNAGE } from '../text/signage';
+import { createCoffeeVendingMachine as createCoffeeVendingMachineAsset, CoffeeVendingMachine } from '../props/coffeeVendingMachine';
+import { createCandyGrabbingMachine as createCandyGrabbingMachineAsset, CandyGrabbingMachine } from '../props/candyGrabbingMachine';
 
 // Generic labeled kiosk: a "JAVA" coffee machine (energy) and a KING "CANDY"
 // machine (time bonus) share this shape — same solid-box-with-readable-status
@@ -126,28 +128,36 @@ export function createKiosk(config: KioskConfig): Kiosk {
   };
 }
 
-/** The exhibition hall's coffee corner. Restores energy (see SwagRun.ts). */
-export function createVendingMachine(): Kiosk {
-  return createKiosk({
-    label: KIOSK_SIGNAGE.java.label,
-    accentColor: '#e8802b',
-    bodyColor: 0x2f3a44,
-    trimColor: 0xc9a24b,
-    availableLabel: KIOSK_SIGNAGE.java.availableLabel,
-    unavailableLabel: KIOSK_SIGNAGE.java.unavailableLabel,
-  });
+export type { CoffeeVendingMachine };
+
+/**
+ * The exhibition hall's coffee corner. Restores energy (see SwagRun.ts/
+ * LunchRush.ts). Built from the standalone `coffeeVendingMachine.js`
+ * generator (see `src/props/`) rather than `createKiosk()`'s simple
+ * box-with-a-label shape — richer model, richer API: callers get
+ * `.activate()` (plays a ~10s brew animation — fire-and-forget, don't gate
+ * the actual energy-restore on its Promise resolving, since the gameplay
+ * cooldown is much shorter than the animation), `.setOutOfStock(bool)`
+ * (replaces the old `setAvailable`, sense inverted), and `.update(dt)`
+ * (must be called every frame — the old Kiosk shape never needed this).
+ */
+export function createVendingMachine(): CoffeeVendingMachine {
+  return createCoffeeVendingMachineAsset();
 }
 
-/** KING's "free candy" machine, per the sponsor-booths brainstorm. Grants a small time bonus. */
-export function createCandyMachine(): Kiosk {
-  return createKiosk({
-    label: KIOSK_SIGNAGE.candy.label,
-    accentColor: '#ff5f8f',
-    bodyColor: 0xe8630f,
-    trimColor: 0xffffff,
-    availableLabel: KIOSK_SIGNAGE.candy.availableLabel,
-    unavailableLabel: KIOSK_SIGNAGE.candy.unavailableLabel,
-  });
+export type { CandyGrabbingMachine };
+
+/**
+ * KING's "free candy" machine, per the sponsor-booths brainstorm — built
+ * from the standalone `candyGrabbingMachine.js` generator (see
+ * `src/props/`), a claw machine rather than a dispenser slot. Its cabinet
+ * was recolored to KING's own orange directly in that file (see its own
+ * comment) rather than the generator's default pink. Same richer API as
+ * `createVendingMachine()` above — see that function's own comment for the
+ * activate()/setOutOfStock()/update() usage notes, identical here.
+ */
+export function createCandyMachine(): CandyGrabbingMachine {
+  return createCandyGrabbingMachineAsset();
 }
 
 /**
