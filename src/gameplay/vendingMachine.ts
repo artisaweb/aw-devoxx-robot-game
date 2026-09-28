@@ -161,8 +161,8 @@ export function createCandyMachine(): CandyGrabbingMachine {
 }
 
 /**
- * Level 2's refuel kiosk (see docs/game-design.md "Knowledge Run") — a WiFi
- * hotspot stand instead of a coffee/candy machine. Same createKiosk()
+ * Level 2's refuel kiosk — a WiFi hotspot stand instead of a coffee/candy
+ * machine. Same createKiosk()
  * machinery, different (very-true-to-conferences) status copy.
  */
 export function createWifiKiosk(): Kiosk {

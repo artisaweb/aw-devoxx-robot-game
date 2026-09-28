@@ -1,9 +1,9 @@
 import * as THREE from 'three';
+import { createFoldingTable, createEventChair } from '../props/eventFurniture';
 
-// Refactored from the user's own Three.js prototype (assets/reference/venue/
-// first-floor-cinema-auditoriums/ideas/wider hall with connections to the
-// room and extra assets.html) into a reusable, configurable class instead of
-// a standalone window.onload script — see its own constructor options below
+// Refactored from an earlier standalone prototype into a reusable,
+// configurable class instead of a standalone window.onload script —
+// see its own constructor options below
 // for what "configurable" covers. Pure presentation: this file has no
 // Collider/game-state imports at all, and doesn't know which (if any) of its
 // door slots has a real room behind it. ExhibitionHall.ts owns those
@@ -90,12 +90,15 @@ const FIXTURE_COLLIDER_RADIUS = 0.45;
 // onto a table dropped the mover straight through it to the flat floor below
 // (the user: "when jumping on the table, i fall into it").
 const TABLE_TOP_HEIGHT = 0.75;
-const CHAIR_TOP_HEIGHT = 0.6;
+// 0.46 (was 0.6, matching the old plain box's own height) — event-furniture.js's
+// createEventChair() has a real 46cm seat height, not a 60cm cube top; kept
+// in sync so jumping onto a chair lands on its actual seat, not floating
+// above/sinking into it (same bug class as TABLE_TOP_HEIGHT's own comment).
+const CHAIR_TOP_HEIGHT = 0.46;
 const FIXTURE_TOP_HEIGHT = 0.3;
 
-// Room-number signage, modeled on the real venue photo
-// (assets/reference/venue/first-floor-cinema-auditoriums/
-// auditorium-stage-screen-sponsors.jpg): a big red backdrop panel with an
+// Room-number signage, modeled on the real venue's look: a big red
+// backdrop panel with an
 // oversized white numeral bleeding off the top edge, a black angled door
 // panel standing in front of it with a small blue check-in screen set into
 // it, and a free-standing kiosk on a pole to the side. Applied to the 7
@@ -399,34 +402,37 @@ export class CinematicHallway extends THREE.Group {
     this.litPillarFixtures = litPillars;
   }
 
+  // Real event-furniture.js models (src/props/) instead of plain instanced
+  // boxes — per the user's own call after the instancing-vs-real-models
+  // tradeoff was raised directly ("commit first what was already adapted,
+  // then go ahead with this"). No InstancedMesh equivalent in that
+  // generator, so this is genuinely more draw calls at hallway scale
+  // (~29 table slots × 2 sides × (1 table + 2 chairs) ≈ 170 objects) —
+  // flagged for a real FPS check after building, not assumed fine.
   private buildFurniture(halfWidth: number): void {
-    const tableGeo = new THREE.BoxGeometry(2, 0.75, 4);
-    const chairGeo = new THREE.BoxGeometry(0.5, 0.6, 0.5);
-    const mat = new THREE.MeshStandardMaterial({ color: this.palette.furniture, roughness: 0.7 });
-
     const slots = this.furnitureSlotZ();
-
-    const tables = new THREE.InstancedMesh(tableGeo, mat, slots.length * 2);
-    const chairs = new THREE.InstancedMesh(chairGeo, mat, slots.length * 4);
-    const m = new THREE.Matrix4();
     const tableX = halfWidth - this.sideDepth * 0.3;
     const chairX = halfWidth - this.sideDepth * 0.6;
-    let tableIndex = 0;
-    let chairIndex = 0;
+    // width/depth swapped from event-furniture.js's own default (1.2 wide x
+    // 0.6 deep, front along +Z) to match the old box's footprint (2 wide x
+    // 4 deep along the hallway's own length) — keeps TABLE_COLLIDER_RADIUS
+    // meaningful without re-tuning it.
     slots.forEach((z) => {
-      for (const side of [-1, 1]) {
-        m.makeTranslation(side * tableX, 0.375, z);
-        tables.setMatrixAt(tableIndex++, m);
+      for (const side of [-1, 1] as const) {
+        const table = createFoldingTable({ width: 2, depth: 4, height: TABLE_TOP_HEIGHT, color: this.palette.furniture });
+        table.object.position.set(side * tableX, 0, z);
+        this.add(table.object);
+
         for (const chairOffset of [-1.2, 1.2]) {
-          m.makeTranslation(side * chairX, 0.3, z + chairOffset);
-          chairs.setMatrixAt(chairIndex++, m);
+          const chair = createEventChair();
+          chair.object.position.set(side * chairX, 0, z + chairOffset);
+          // Faces the table (which sits further from the corridor center
+          // than the chair does) — default orientation faces +Z.
+          chair.object.rotation.y = side * (Math.PI / 2);
+          this.add(chair.object);
         }
       }
     });
-    tables.instanceMatrix.needsUpdate = true;
-    chairs.instanceMatrix.needsUpdate = true;
-    this.add(tables);
-    this.add(chairs);
   }
 
   private buildDoorFronts(openDoorSlots: HallwayOpenDoorSlot[]): void {

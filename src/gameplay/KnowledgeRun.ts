@@ -14,12 +14,12 @@ import { randomConfusedGripe, randomConfusedReaction } from '../text/attendeeDia
 import { randomDroidToppleToast } from '../text/robotToasts';
 import { KNOWLEDGE_QUOTES, KnowledgeQuoteId } from '../text/knowledgeQuotes';
 
-// Level 2 — Droid, "Knowledge Run" (see docs/game-design.md "Level 2"). Same
+// Level 2 — Droid, "Knowledge Run". Same
 // engine/shape as Voxxy's Swag Run (timer, pickups, wandering hazards, a
 // refuel kiosk, early finish + time bonus), reskinned for the first-floor
 // corridor/Room 4/Stair C lobby map instead of the ground-floor hall. Droid's
 // own 3D model doesn't exist yet — Game.ts reuses the Voxxy mesh as a
-// placeholder (see game-design.md's note on this) — nothing here depends on
+// placeholder — nothing here depends on
 // which mesh the robot is wearing.
 
 // Which "conference wisdom" quote (see src/text/knowledgeQuotes.ts — that's
@@ -127,7 +127,7 @@ const HAZARD_CHASE_GIVEUP_COOLDOWN = 5;
 // never threads a ~2.5m-wide doorway in a 16m-wide hall by chance. This is
 // what makes hazards roam the room in practice, not just in principle. Used
 // to be one point per room (four small rooms); now that Room 4 alone is
-// real-scale (see docs/map-realism.md item 3), a single center point would
+// real-scale, a single center point would
 // have every wandering hazard converge on the same spot in a room this big
 // — spread across the room's own depth/width instead (apron, two rows either
 // side of the aisle, back row), plus one hall point so hazards still
@@ -167,8 +167,7 @@ const HIT_REACTION_DURATION = 2.0;
 // A bubble only actually renders within this distance — see SwagRun.ts's
 // identical constant and speechBubble.ts's hasMessage()/visible split.
 const SPEECH_VISIBLE_RANGE = 6;
-// Droid's topple (docs/robot-characteristics.md "Droid's topple — worked out
-// in detail"): a two-phase failure, not Voxxy's single flat stun. Down is
+// Droid's topple: a two-phase failure, not Voxxy's single flat stun. Down is
 // full control loss; rise lets him turn but not move. Total ~3.2s vs.
 // Voxxy's ~2.2s (STUN_DURATION + POST_STUN_GRACE in SwagRun.ts) — the point
 // is a longer, distinctly slower recovery for the tall/deliberate robot.
@@ -185,8 +184,8 @@ const TIME_BONUS_PER_PICKUP = 3;
 // one camper — 0.5s wasn't enough to move clear of a crowd already in range.
 export const POST_TOPPLE_GRACE = 1.0;
 // A couple of solid obstacles left in the corridor — AV carts and projector
-// stands, per docs/game-design.md ("solid colliders hazards must route
-// around too, same pattern as the Tiny rope-maze"). Simple box props, no
+// stands, solid colliders hazards must route around too, same pattern as
+// the Tiny rope-maze. Simple box props, no
 // need for the sponsor-booth level of detail.
 function createAvCart(): THREE.Object3D {
   const group = new THREE.Group();
@@ -444,8 +443,8 @@ export class KnowledgeRun {
 
         // Every hazard not already actively chasing gets pulled toward this
         // pickup's spot for a few seconds — mirrors Lunch Rush's "eating a
-        // sandwich near a queued attendee guarantees a chase" behavior
-        // (docs/robot-characteristics.md). Reuses the existing
+        // sandwich near a queued attendee guarantees a chase" behavior.
+        // Reuses the existing
         // roamTarget/roamElapsed steering (see ROOM_WAYPOINTS handling below)
         // instead of a second parallel steering system — same arrival/timeout
         // logic, just a shorter PICKUP_LURE_DURATION and a different
@@ -652,7 +651,7 @@ export class KnowledgeRun {
         h.bubble.show(randomConfusedReaction(), HIT_REACTION_DURATION);
         h.gripeTimer = GRIPE_INTERVAL_MIN + Math.random() * (GRIPE_INTERVAL_MAX - GRIPE_INTERVAL_MIN);
         // Droid doesn't visibly wear knowledge the way Voxxy wears swag — the
-        // "drop the last pickup" beat (per game-design.md) becomes losing a
+        // "drop the last pickup" beat becomes losing a
         // point instead of a worn item coming off.
         this.score = Math.max(0, this.score - 1);
       }

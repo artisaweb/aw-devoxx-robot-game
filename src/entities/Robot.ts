@@ -87,12 +87,11 @@ const TIPSY_BUG_ORBIT_SPEED = 5; // radians/second
 const LOAD_PENALTY_PER_ITEM = 0.05; // 5% slower per carried item
 const MIN_LOAD_FACTOR = 0.5; // never slower than half speed, however loaded
 
-// Biggy's "Lunch Rush" growth (see docs/game-design.md "Level 3" and
-// docs/robot-characteristics.md) — every sandwich makes him permanently
+// Biggy's "Lunch Rush" growth — every sandwich makes him permanently
 // bigger via grow(), which this file folds into real movement cost (speed,
 // turn rate, acceleration, collision size) rather than leaving it a purely
-// visual/HUD number. This is the Realism rules-alignment fix from the design
-// doc: growth needed to cost more than a flat top-speed penalty. Voxxy and
+// visual/HUD number: growth needed to cost more than a flat top-speed
+// penalty. Voxxy and
 // Droid never call grow(), so sizeScale stays 1 and none of this applies to
 // them.
 const MAX_SIZE_SCALE = 2.6; // clamp so a very long endless run doesn't grow Biggy into something unplayable
@@ -268,7 +267,7 @@ export class Robot {
   private loadingModel = false;
   private currentSpeed = 0;
   private fallen = false;
-  // Droid's topple (docs/robot-characteristics.md): a two-phase failure, not
+  // Droid's topple: a two-phase failure, not
   // a single stunTimer-style flat window. toppleDownTimer counts down first
   // (full control loss, held flat); once it hits 0, toppleRiseTimer takes
   // over (can turn, still can't move) using toppleRiseDuration to compute
@@ -309,9 +308,9 @@ export class Robot {
   private currentActionName: RobotAnimationName | null = null;
   // Which level's map the robot is currently standing on — set explicitly by
   // Game.ts at each level transition, never inferred from position. Each
-  // level is its own standalone map (see docs/game-design.md "Level
-  // structure"), so this only ever changes at a controlled transition point,
-  // not from walking across some in-world threshold.
+  // level is its own standalone map, so this only ever changes at a
+  // controlled transition point, not from walking across some in-world
+  // threshold.
   private currentMap: Floor = 'ground';
 
   constructor(mesh?: THREE.Object3D) {
@@ -682,7 +681,7 @@ export class Robot {
   }
 
   /**
-   * Droid's topple (docs/robot-characteristics.md): reuses fallOver()'s
+   * Droid's topple: reuses fallOver()'s
    * tilt technique made temporary and eased instead of permanent. Down
    * phase blocks turning too; the rise phase (driven by riseDuration) only
    * blocks movement, letting the player re-aim while Droid gets upright.
@@ -697,7 +696,7 @@ export class Robot {
   }
 
   /**
-   * Biggy's Lunch Rush growth (see docs/game-design.md "Level 3") — every
+   * Biggy's Lunch Rush growth — every
    * sandwich makes him permanently bigger, which this file folds into real
    * movement cost, not just a bigger model (see MAX_SIZE_SCALE). Never called
    * by Voxxy/Droid's levels.
@@ -743,10 +742,10 @@ export class Robot {
   }
 
   /**
-   * Biggy's permanent Lunch Rush failure (see docs/robot-characteristics.md):
-   * wide and top-heavy, once he goes down he can't get back up. LunchRush.ts
-   * decides *when* this fires (gated to sizeScale, per the rules-alignment
-   * playability fix — early hits just stumble) — this just plays it out.
+   * Biggy's permanent Lunch Rush failure: wide and top-heavy, once he goes
+   * down he can't get back up. LunchRush.ts
+   * decides *when* this fires (gated to sizeScale — early hits just
+   * stumble) — this just plays it out.
    */
   fallOver(): void {
     this.fallen = true;
@@ -764,7 +763,7 @@ export class Robot {
   addAccessory(type: SwagType, colorIndex: number): void {
     // KING's crown and Miracle Systems' cap share one head anchor — wearing
     // either one replaces whichever of the two is already worn there,
-    // rather than stacking (see swagAccessories.md's head-slot conflict note).
+    // rather than stacking.
     if (HEAD_SLOT_TYPES.has(type)) {
       const existingIndex = this.wornItems.findIndex((w) => HEAD_SLOT_TYPES.has(w.type));
       if (existingIndex !== -1) {
@@ -872,8 +871,8 @@ export class Robot {
       if (this.toppleDownTimer === 0) this.toppleRiseTimer = this.toppleRiseDuration;
     } else if (this.toppleRiseTimer > 0) {
       // Rising: can turn (aim the next move) but still can't walk — the
-      // "getting a knee under himself" beat docs/robot-characteristics.md
-      // asks for, distinct from an instant stun/recover.
+      // "getting a knee under himself" beat, distinct from an instant
+      // stun/recover.
       this.toppleRiseTimer = Math.max(0, this.toppleRiseTimer - dt);
       const turnSpeed = TURN_SPEED / this.mobilityPenalty;
       if (input.isDown('KeyA') || input.isDown('ArrowLeft')) this.heading += turnSpeed * dt;
@@ -1005,8 +1004,7 @@ export class Robot {
     }
 
     // Animation priority: airborne > stunned/toppled > walking > idle. Droid's
-    // topple reuses the 'stun' clip (docs/robot-characteristics.md: "doesn't
-    // need new tooling of its own") rather than a dedicated animation. Falls
+    // topple reuses the 'stun' clip rather than a dedicated animation. Falls
     // through to the next tier for any clip that hasn't shipped yet (see
     // voxxyModel.ts) rather than erroring.
     if (!this.grounded) {

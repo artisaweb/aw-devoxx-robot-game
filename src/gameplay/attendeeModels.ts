@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
-// Generic "conference hero" archetypes for attendee hazards in Swag Run — see
-// docs/game-design.md "NPCs and speaker likeness": original character designs,
-// only loosely inspired by real speakers' general style (hair/beard/silhouette),
+// Generic "conference hero" archetypes for attendee hazards in Swag Run:
+// original character designs, only loosely inspired by real speakers'
+// general style (hair/beard/silhouette),
 // never a named or identifiable likeness. All four share one body skeleton
 // (leg/torso/head heights) so swagAccessories.ts's shared HAZARD_SPOTS anchor
 // table lands correctly regardless of which archetype stole an item.

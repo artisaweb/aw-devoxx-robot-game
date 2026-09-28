@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-// Procedural approximation of Voxxy from assets/reference/robots/voxxy-robot.png:
+// Procedural approximation of Voxxy from a reference image:
 // round bear-eared head with a dark visor and glowing eyes, a teardrop torso with
 // a white belly stripe and chest decal, and two stout teardrop legs ending in
 // small dark feet. Built from primitives (no external asset) per the rules'
@@ -110,8 +110,7 @@ export function createVoxxyMesh(): THREE.Object3D {
   return root;
 }
 
-// AI-generated + rigged models (see docs/genai-log.md and
-// docs/3d-asset-pipeline.md), served from public/models so each is a plain
+// AI-generated + rigged models, served from public/models so each is a plain
 // static asset at runtime. Every robot's files follow the same convention:
 // `${robotId}.glb` (base mesh + the walk clip) plus optional
 // `${robotId}-run.glb` / `-jump.glb` / `-stun.glb` / `-idle.glb` siblings, one
@@ -126,9 +125,8 @@ export function createVoxxyMesh(): THREE.Object3D {
 // rescales per robot to match the procedural placeholder's proportions so
 // gameplay tuning (jump height, ledge clearance, camera look height) built
 // against that placeholder doesn't need retuning. Droid's is taller than
-// Voxxy's, matching the "tall" trait (docs/robot-characteristics.md) — purely
-// a look; no gameplay mechanic currently keys off a robot's exact height (see
-// docs/genai-log.md's Droid entry).
+// Voxxy's, matching his "tall" trait — purely
+// a look; no gameplay mechanic currently keys off a robot's exact height.
 // Biggy starts a little shorter than Voxxy, not taller — his design reads as
 // wide/round rather than tall (the mesh's own proportions already carry
 // that), and starting shorter leaves visible headroom for grow() to make him

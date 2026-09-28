@@ -11,8 +11,7 @@ import { createSpeechBubble, SpeechBubble } from './speechBubble';
 import { randomLunchQueueLine, randomLunchChaseLine, randomLunchCaughtReaction, randomLunchBumpReaction } from '../text/attendeeDialogue';
 import { randomGrowthToast, randomHungerLowToast, randomHungerStarvedToast, randomWobblingToast } from '../text/robotToasts';
 
-// Level 3 — Biggy, "Lunch Rush" (see docs/game-design.md "Level 3" and
-// docs/robot-characteristics.md). Same ground-floor map as Voxxy's Swag Run,
+// Level 3 — Biggy, "Lunch Rush". Same ground-floor map as Voxxy's Swag Run,
 // redressed for lunchtime rather than a fourth separate map. Deliberately
 // NOT the same engine shape as Levels 1-2 in one important way: there is no
 // round timer and no early-finish — this is Biggy's own endless/high-score
@@ -33,7 +32,7 @@ type SandwichType = 'crab' | 'club' | 'cheese' | 'ham-cheese';
 const COMMON_TYPES: SandwichType[] = ['ham-cheese', 'club', 'cheese'];
 
 // Score + growth per sandwich — eating is a self-inflicted difficulty ramp,
-// not a free good thing (see docs/game-design.md). Crab is the jackpot: best
+// not a free good thing. Crab is the jackpot: best
 // score, biggest size hit, rare, and short-lived on the table (see
 // CRAB_SPAWN_CHANCE/CRAB_LIFETIME below) — a real risk/reward call.
 const SANDWICH_SCORE: Record<SandwichType, number> = { 'ham-cheese': 1, club: 1, cheese: 1, crab: 5 };
@@ -136,8 +135,8 @@ const BEER_TAP_TIPSY_DURATION = 5;
 const BEER_TAP_COOLDOWN = 8;
 
 // Attendees spawn over time from the entrance and walk to the back of a
-// growing queue at the table (see docs/game-design.md — "the crowd visibly
-// grows the longer a run goes"), rather than chasing on sight the way
+// growing queue at the table — the crowd visibly grows the longer a run
+// goes — rather than chasing on sight the way
 // Levels 1-2's hazards do. Getting close to a queued attendee — and
 // *especially* eating a sandwich right next to one — can provoke them into
 // breaking off and actively chasing Biggy down, which is what actually
@@ -200,9 +199,8 @@ const SPEECH_VISIBLE_RANGE = 8;
 export const STUN_DURATION = 1.0; // "stumble" duration for a hit below FALL_THRESHOLD — recoverable, same shape as Levels 1-2
 export const POST_STUN_GRACE = 1.0;
 // Below this sizeScale, a collision is just a stumble (brief control loss,
-// recoverable) — matches the rules-alignment Playability fix in
-// docs/game-design.md ("permadeath on the very first hit... risks reading
-// as unfair"). At/above it, a collision starts counting toward the real
+// recoverable) — permadeath on the very first hit risks reading as unfair.
+// At/above it, a collision starts counting toward the real
 // fall below instead of always just stumbling.
 const FALL_THRESHOLD = 1.4;
 // Once at/above FALL_THRESHOLD, a single bump used to be an instant permanent
@@ -217,10 +215,8 @@ const FALL_THRESHOLD = 1.4;
 const FALL_HIT_COMBO_REQUIRED = 3;
 const FALL_HIT_COMBO_WINDOW = 5; // seconds since the last qualifying hit that still counts toward the combo
 
-// Hunger — a second, independent permanent-fall trigger (todo.md's Level 3
-// "hardly even a game, only way to get the game over is by running into an
-// npc myself" feedback, Option B: "a meter that drains over time and refills
-// on eating, game-over on empty"). Deliberately additive, not a replacement
+// Hunger — a second, independent permanent-fall trigger: a meter that drains
+// over time and refills on eating, game-over on empty. Deliberately additive, not a replacement
 // for the hazard-collision fall above: the two are separate pressures (avoid
 // the crowd vs. keep eating) that compound as a run goes on, since a bigger
 // Biggy is also slower to reach the next sandwich in time.
@@ -639,8 +635,8 @@ export class LunchRush {
       }
     }
 
-    // Spawn rate ramps up with survived time — the actual difficulty curve
-    // (see docs/game-design.md): the crowd visibly grows the longer a run
+    // Spawn rate ramps up with survived time — the actual difficulty curve:
+    // the crowd visibly grows the longer a run
     // goes, on top of Biggy himself getting bigger and slower.
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0 && this.diners.length < MAX_ATTENDEES) {

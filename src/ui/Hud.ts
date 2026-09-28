@@ -39,9 +39,9 @@ const FIRST_FLOOR_MINIMAP_ZONES = [FIRST_FLOOR_HALL_ZONE, FIRST_FLOOR_ROOM4_ZONE
 const MINIMAP_SIZE = 150;
 
 /**
- * The whole-session tally shown on "A Day at Devoxx"'s end screen (see
- * docs/game-design.md — Biggy's permanent fall is the only real end the game
- * has, so it doubles as the end of the day). `best`/`isNewBest` back a
+ * The whole-session tally shown on "A Day at Devoxx"'s end screen — Biggy's
+ * permanent fall is the only real end the game has, so it doubles as the
+ * end of the day. `best`/`isNewBest` back a
  * personal-best line via localStorage (Game.ts owns reading/writing it) —
  * deliberately just a per-browser personal best, not a shared leaderboard,
  * so it doesn't matter that it's trivially editable via devtools.

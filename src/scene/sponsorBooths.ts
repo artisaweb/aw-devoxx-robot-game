@@ -4,12 +4,10 @@ import { Collider, BOOTH_PLATFORM_ZONES } from './ExhibitionHall';
 import { SPONSOR_SIGNAGE, BELGIAN_PROVINCES } from '../text/signage';
 import { createBeerTap as createBeerTapAsset, BeerTap } from '../props/beerTap';
 
-// Seven sponsor-booth set pieces from the brainstorm in
-// assets/reference/venue/ground-floor-reception-and-exhibition/sponsor-booths.md —
+// Seven sponsor-booth set pieces —
 // original stylized props referencing each sponsor by name/product, not their
-// actual logos/trademarks (same reasoning as the NPC-likeness policy in
-// docs/game-design.md: a wink for people who recognize it, never a
-// reproduction). Two (RocketMind, Goggles Cloud) are the jumpable furniture
+// actual logos/trademarks (same "wink for people who recognize it, never a
+// reproduction" policy as the NPCs). Two (RocketMind, Goggles Cloud) are the jumpable furniture
 // from BOOTH_PLATFORM_ZONES in ExhibitionHall.ts — that file is the single
 // source of truth for their footprint/height, this module just places
 // matching visuals. The other five are solid ground-level landmarks with
@@ -20,15 +18,13 @@ import { createBeerTap as createBeerTapAsset, BeerTap } from '../props/beerTap';
 // the two sit next to each other without overlapping.
 //
 // Layout is spread across the open floor in two vertical columns (x ≈ -25 and
-// x ≈ 25) running the depth of the hall — matching a real expo hall (see
-// hall-interior-crowd-wide.jpg: kiosks scattered among the crowd, not backed
-// against a wall) rather than lining the walls. Deliberately clear of the
+// x ≈ 25) running the depth of the hall — matching a real expo hall (kiosks
+// scattered among the crowd, not backed against a wall) rather than lining
+// the walls. Deliberately clear of the
 // center lane (x ≈ 0), which is where COFFEE_MACHINE_POS (SwagRun.ts) already
 // sits — columns leave it standing clear, which also happens to roughly
 // match its real-world spot. "Devoxx Polo Pickup" is the one thing that's
-// actually wall-mounted, being a fixed venue fixture, not a booth — see
-// docs/venue-map.svg for how these land relative to both the code hall
-// (60x40) and the architect's real, slightly smaller plan.
+// actually wall-mounted, being a fixed venue fixture, not a booth.
 //
 // x≈±25 clears the column grid's last line (COLUMN_SPACING=10, columns at
 // x=±10/±20) with real margin, in the strip between the columns and the
@@ -90,7 +86,7 @@ const MIRACLE_ROTATION = { cx: MIRACLE_CAR_POS[0], cz: MIRACLE_CAR_POS[1] - 0.4,
 const TINY_CENTER: [number, number] = [-30, 6];
 const TINY_ROTATION = { cx: TINY_CENTER[0], cz: TINY_CENTER[1] - 0.2, angle: Math.PI / 2 };
 // Right column, between KING and Goggles Cloud — completes the 7th platinum
-// sponsor from sponsor-booths.md alongside the other six. Shifted by
+// sponsor alongside the other six. Shifted by
 // (+5, +1) — same reasoning as KING/BOOTH_PLATFORM_ZONES above.
 const OMNIWARE_POS: [number, number] = [30, 4];
 const OMNIWARE_ROTATION = { cx: OMNIWARE_POS[0], cz: OMNIWARE_POS[1] - 0.2, angle: -Math.PI / 2 };
@@ -115,9 +111,8 @@ function cssHex(hex: number): string {
 
 // Every booth below was built facing along +/-z, as if backed against a wall
 // behind the aisle. A real expo booth standing in a side column instead
-// faces sideways INTO the aisle that runs past it (see
-// hall-interior-crowd-wide.jpg: kiosks along both sides, fronts turned
-// toward the center walkway) — rotateBooth()/rotateCollider() turn a
+// faces sideways INTO the aisle that runs past it (kiosks along both sides,
+// fronts turned toward the center walkway) — rotateBooth()/rotateCollider() turn a
 // booth's front from +z to face the hall center (+x for the left column at
 // x≈-18, -x for the right column at x≈18) around a given pivot point,
 // without touching any of the booth's own local geometry.
@@ -139,8 +134,7 @@ function rotateCollider(c: Collider, cx: number, cz: number, angle: number): Col
 }
 
 // Print-poster style texture — a solid accent-color panel with bold white
-// text, styled after the real sponsor's real flat-orange banner in
-// assets/reference/venue/ground-floor-reception-and-exhibition/booths/ing-booth.jpeg
+// text, styled after a real sponsor's real flat-orange banner,
 // rather than a glowing sci-fi screen, which is what the original
 // sprite-based sign looked like. Matte MeshStandardMaterial (no emissive, no
 // transparency) — print signage, not a digital display. No header/label text
@@ -389,7 +383,7 @@ function createATMScreenTexture(): THREE.CanvasTexture {
 }
 
 // Miracle Systems' backdrop screen — name + a genuinely neutral corporate
-// slogan about performance, not licensing cost (see docs/game-design.md): the
+// slogan about performance, not licensing cost — the
 // joke lives entirely in the name/rhyme and the F1 car, never in anything
 // that reads as a real complaint about the real sponsor's licensing.
 function createMiracleSignTexture(): THREE.CanvasTexture {
@@ -441,7 +435,7 @@ function createRacingWheel(radius: number, width: number): THREE.Object3D {
 // a low-poly rocket standing beside it (the booth's namesake), and a small
 // backdrop wall behind — all with generous clearance around the desk itself,
 // since there's no reason to crowd it (contrast KING, whose cluster of props
-// needed an explicit playability check — see docs/game-design.md).
+// needed an explicit playability check).
 function createRocketMindBooth(): THREE.Object3D {
   const zone = BOOTH_PLATFORM_ZONES[0];
   const group = new THREE.Group();
@@ -635,9 +629,8 @@ function createGogglesCloudBooth(): THREE.Object3D {
 
 // --- KING: gold lion statue on a pedestal in front of an orange back-wall
 // banner, flanked by a high-top counter table and the candy kiosk (built by
-// SwagRun.ts) — matches the real booth's composition in
-// assets/reference/venue/ground-floor-reception-and-exhibition/booths/ing-booth.jpeg
-// (backdrop wall behind a centerpiece, furniture flanking left/right) rather
+// SwagRun.ts) — matches a real booth's composition (backdrop wall behind a
+// centerpiece, furniture flanking left/right) rather
 // than a single statue standing alone in open floor.
 const KING_PEDESTAL_HEIGHT = 0.5;
 // The high-top counter is a real jump platform (BOOTH_PLATFORM_ZONES[2], not
@@ -793,10 +786,9 @@ function createKINGBooth(): THREE.Object3D {
   group.add(backdrop);
 
   // Name sign in the clear band above the arches below — no separate
-  // hanging sign, consistent with every other booth (see
-  // docs/game-design.md — having some booths hang a sign and others not
-  // would read as an unintentional inconsistency, not a deliberate style
-  // choice).
+  // hanging sign, consistent with every other booth — having some booths
+  // hang a sign and others not would read as an unintentional
+  // inconsistency, not a deliberate style choice.
   const sign = new THREE.Mesh(
     new THREE.PlaneGeometry(3.2, 0.55),
     new THREE.MeshBasicMaterial({ map: createBoothSignTexture(SPONSOR_SIGNAGE.king.name, cssHex(0xe8630f)) }),
@@ -995,8 +987,8 @@ function createVaultiusBooth(): THREE.Object3D {
 
   // ATM — a small, universally-liked bank prop. A take-a-number kiosk here
   // would carry an unwanted "you'll be waiting in line" undertone (same
-  // reasoning behind Tiny's queue-maze concept getting dropped — see
-  // docs/game-design.md "Tiny"), rather than anything actually flattering.
+  // reasoning behind Tiny's queue-maze concept getting dropped), rather than
+  // anything actually flattering.
   const atmBody = new THREE.Mesh(new RoundedBoxGeometry(0.5, 1.1, 0.4, 4, 0.05), silver);
   atmBody.position.set(VAULTIUS_KIOSK_POS[0], 0.55, VAULTIUS_KIOSK_POS[1]);
   group.add(atmBody);
@@ -1129,8 +1121,7 @@ function createMiracleSystemsBooth(): THREE.Object3D {
 // a matching "Tiny, on a national scale." line — the actual joke for Tiny's
 // booth: a modest, humble counter with a comparatively oversized screen
 // behind it, celebrating real reach rather than an invented complaint about
-// service speed (see docs/game-design.md "Tiny" for why the earlier
-// queue-maze concept got replaced).
+// service speed (the earlier queue-maze concept got replaced for this).
 // Belgium's real 10 provinces, each with a green "online" dot, are the
 // actual content of Tiny's oversized screen (copy lives in
 // src/text/signage.ts along with the rest of this booth's copy). Genuine
@@ -1310,7 +1301,7 @@ function createTinyBooth(): THREE.Object3D {
 }
 
 // OmniWare's backdrop screen — name + "run anywhere," never "clone" (which
-// read as "cheap knockoff" — see the naming brainstorm in sponsor-booths.md).
+// read as "cheap knockoff").
 function createOmniWareSignTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
@@ -1488,7 +1479,7 @@ function createOmniWareBooth(): THREE.Object3D {
 // year AND an evening where the conference itself taps beer — this is a
 // generic stand-in for either, not a specific sponsor, matching this
 // project's own "a wink, not a reproduction" policy for real brands/venue
-// details (see docs/game-design.md). Placed in open floor clear of the
+// details. Placed in open floor clear of the
 // column grid, both stair enclosures, and every other booth/table.
 export const BEER_TAP_POS: [number, number] = [10, 15];
 // Built from the standalone beerTap.js generator (src/props/) — a full bar
@@ -1510,7 +1501,7 @@ export const BEER_TAP_COLLIDER_RADIUS = 2.63;
  * these colliders have to go through the exact same rotateCollider(pivot,
  * angle) to stay lined up with what's actually rendered. Each booth also
  * gets 1-2 small colliders across its own backdrop panel — those panels are
- * built deliberately uncollided (see sponsor-booths.md), so without these a
+ * built deliberately uncollided, so without these a
  * player could walk straight through the "wall" behind any of them from the
  * far side. The wallClearance ground-floor movement already adds (1.2, from
  * MOVER_CLEARANCE) around any small collider is plenty to block a thin

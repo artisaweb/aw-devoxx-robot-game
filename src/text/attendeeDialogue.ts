@@ -46,8 +46,7 @@ export const AMBIENT_GRIPES = [
  * short reaction barks rather than wandering-around chatter. Kept
  * good-natured/apologetic — never framed as taking something on purpose —
  * attendees are comic relief, not antagonists, same "earnest, no villains"
- * rule as the robots themselves (see game-design.md "NPCs and speaker
- * likeness").
+ * rule as the robots themselves.
  */
 export const HIT_REACTIONS = [
   'OOPS, MY BAD!',
@@ -58,7 +57,7 @@ export const HIT_REACTIONS = [
 ];
 
 // Level 2 (Knowledge Run, first floor) — eager attendees rushing to grab a
-// seat before a packed hero talk, per docs/game-design.md's "seat-saving"
+// seat before a packed hero talk, a "seat-saving"
 // hazard flavor. Same two-tier shape as Level 1's lines above (ambient
 // wander-time chatter vs. a short reaction the instant they bump the robot),
 // reskinned for the corridor/auditorium setting. Same positivity rule as
@@ -89,7 +88,7 @@ export const CONFUSED_REACTIONS = [
 // already cleared "who took all the crab sandwiches"), and a line for
 // actually catching him.
 export const LUNCH_QUEUE_LINES = [
-  "WHERE'S MY CRAB SANDWICH?!", // the flagship joke — see docs/brainstorm-log.md, they're famous and disappear fast
+  "WHERE'S MY CRAB SANDWICH?!", // the flagship joke — they're famous and disappear fast
   'WHO ATE ALL THE CRAB SANDWICHES?!', // griping about fellow attendees, not the event — and "classic" frames it as fond tradition, not a real complaint
   'IS THAT ROBOT GETTING BIGGER?',
   'I SWEAR HE RUNS ON MAYONNAISE.',

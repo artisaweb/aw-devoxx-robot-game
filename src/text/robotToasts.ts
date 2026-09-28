@@ -2,8 +2,7 @@
 // aside about itself, not attendee speech (see attendeeDialogue.ts for that),
 // shown via Hud.showQuoteToast(). Kept as its own category rather than merged
 // into attendeeDialogue.ts's arrays since who's "speaking" is genuinely
-// different — same reasoning docs/robot-characteristics.md gives for keeping
-// these separate. Same random-pick shape as attendeeDialogue.ts's accessors.
+// different. Same random-pick shape as attendeeDialogue.ts's accessors.
 
 /**
  * Biggy's own aside about visibly getting bigger — shown via
@@ -23,9 +22,8 @@ export const GROWTH_TOASTS = [
 ];
 
 /**
- * Droid's deadpan lines shown the instant a topple starts (see
- * docs/robot-characteristics.md "Droid's topple — worked out in detail"),
- * via Hud.showQuoteToast(), same pattern as GROWTH_TOASTS above.
+ * Droid's deadpan lines shown the instant a topple starts, via
+ * Hud.showQuoteToast(), same pattern as GROWTH_TOASTS above.
  */
 export const DROID_TOPPLE_TOASTS = ['...I meant to do that.', 'Systems nominal. Pride: not.'];
 
