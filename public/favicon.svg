@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Voxxy's head, simplified for a favicon — same palette as voxxyModel.ts
+       (ORANGE body, DARK visor, amber EYE_COLOR glow), not a literal render. -->
+  <circle cx="16" cy="17" r="12" fill="#f5821f" />
+  <rect x="5" y="13" width="22" height="7" rx="3.5" fill="#161616" />
+  <circle cx="11.5" cy="16.5" r="2.1" fill="#ffb347" />
+  <circle cx="20.5" cy="16.5" r="2.1" fill="#ffb347" />
+  <rect x="13" y="4" width="6" height="5" rx="2" fill="#f5821f" />
+  <circle cx="16" cy="4" r="2.4" fill="#ffb347" />
+</svg>
