@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 import { CinematicHallway } from './CinematicHallway';
 
-// Rough blockout proportions from
-// assets/reference/venue/ground-floor-reception-and-exhibition/plan-ground-floor-labeled.jpg
+// Rough blockout proportions from the real venue's floor plan
 // (one large rectangular hall, evenly spaced structural columns, two staircases
-// up to the auditorium level along one long wall). Not pixel-traced — see
-// docs/venue-map.svg for a to-scale reconciliation against the architect's plan.
+// up to the auditorium level along one long wall). Not pixel-traced.
 // Bumped 1.5x (60x40 -> 90x60) per the user: "i believe the proportions of the
 // exhibition hall should be a lot larger now" — the shell (walls, floor,
 // ceiling, column grid) all scale automatically from these two constants.
@@ -126,12 +124,10 @@ export const FLOOR_HEIGHT = 4.5; // first floor's story height
 // the door stuck bouncing off it.
 export const FIRST_FLOOR_CENTER_X = -13; // Stairs A/B door, on the ground floor's back wall
 
-// First-floor layout — first decided 2026-09-24 (see docs/map-realism.md
-// item 3) as one real auditorium replacing four smaller mirrored rooms, then
-// rebuilt at a much bigger, real-convention-center scale on 2026-09-26 after
-// The user's own Three.js prototype and the real floor plan
-// (assets/reference/venue/first-floor-cinema-auditoriums/plan-first-floor-rooms-3-10.jpg,
-// 8 auditoriums total, 4 per side fanning out from one wide central
+// First-floor layout — first decided 2026-09-24 as one real auditorium
+// replacing four smaller mirrored rooms, then rebuilt at a much bigger,
+// real-convention-center scale on 2026-09-26 to match the real floor plan
+// (8 auditoriums total, 4 per side fanning out from one wide central
 // corridor). Still only ONE of the 8 is a real playable interior — the
 // other 7 stay closed-door props with nothing behind them, same scope
 // decision as before, just at the new scale. See CinematicHallway.ts for the
@@ -267,7 +263,7 @@ const HALL_STAIR_BRIDGE: RaisedZone = {
 const AUDITORIUM_ENTRANCE_GAP_HALF = 2.5;
 // Seating rises one real ROW at a time, not one continuous smooth ramp and
 // not grouped into a handful of big flat landings either (2026-09-24
-// redesign, then revised same day — see docs/game-design.md). The room
+// redesign, then revised same day). The room
 // first rose in ~22 tiny TIER_RISE=0.26 steps, all under Robot.ts's
 // AUTO_STEP_HEIGHT — read as real stadium stairs but meant the whole room
 // was reachable by just walking (the user: "walking through them is not the
@@ -933,11 +929,9 @@ export function createExhibitionHall(): THREE.Group {
   const halfW = HALL_WIDTH / 2;
   const halfD = HALL_DEPTH / 2;
 
-  // Colors from assets/reference/venue/ground-floor-reception-and-exhibition/hall-interior-crowd-wide.jpg:
-  // the exhibition floor reads bright and open (white walls/columns, mid-gray carpet)
-  // under a tall black ceiling void — distinct from the moody dark corridor look of
-  // assets/reference/venue/first-floor-cinema-auditoriums/corridor-hall-in-the-middle-canopy.jpg
-  // (the auditorium level upstairs).
+  // Colors from the real venue: the exhibition floor reads bright and open
+  // (white walls/columns, mid-gray carpet) under a tall black ceiling void —
+  // distinct from the moody dark corridor look of the auditorium level upstairs.
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x9a9a94 });
   const wallMat = new THREE.MeshStandardMaterial({ color: 0xf0efe9 });
   const columnMat = new THREE.MeshStandardMaterial({ color: 0xe8e6df });
@@ -1577,10 +1571,10 @@ function buildStairsAndScreen(group: THREE.Group, y: number): void {
 // live: "before this hall change, the cinema room was okay, we should
 // probably revert it to that state... nvm the orientation, since the other
 // rooms aren't implemented, they won't be in the way." The rotation also
-// introduced a real wall-dimension bug (w/d swapped on every wall — see the
-// game-design.md entry for the full trace) on top of not looking right, so
-// this reverts to the pre-rotation geometry below rather than trying to fix
-// the rotated version further. Only ROOM4_ZONE's `x`/`z` changed (to
+// introduced a real wall-dimension bug (w/d swapped on every wall) on top
+// of not looking right, so this reverts to the pre-rotation geometry below
+// rather than trying to fix the rotated version further. Only ROOM4_ZONE's
+// `x`/`z` changed (to
 // reattach to the new, bigger hallway's own wall/door slot) — this function
 // itself is unchanged from before the rotation attempt.
 function buildAuditorium(
@@ -1628,9 +1622,8 @@ function buildAuditorium(
     group.add(wall);
   }
 
-  // Stage + a big screen along the far wall, redone against actual footage
-  // (assets/reference/venue/videos/keynote.webm — see docs/prop-references.md
-  // item 2) rather than a flat colored box: a dark bezel frame around the
+  // Stage + a big screen along the far wall, redone against actual venue
+  // footage rather than a flat colored box: a dark bezel frame around the
   // picture area (the real screen reads as a bright rectangle floating in a
   // near-black room, not a colored slab with visible edges), a light-truss
   // rig hanging just above/in front of it, and the branded standing letters
@@ -1682,9 +1675,9 @@ function buildAuditorium(
   const seatsPerSide = Math.max(1, Math.floor(riserWidth / seatSpacing));
 
   // Individual cinema seats (cushion + backrest + a shared-style armrest
-  // pad between seats, not one flat cube — see auditorium-seating-rows-dark.jpg
-  // and docs/prop-references.md's own "flip-up armrest" note) via
-  // InstancedMesh: at 16 tiers × ~17 seats × 2 sides, one mesh per seat-part
+  // pad between seats, not one flat cube, matching the real venue's
+  // flip-up-armrest style) via InstancedMesh: at 16 tiers × ~17 seats ×
+  // 2 sides, one mesh per seat-part
   // would still be several hundred draw calls for this room.
   //
   // One real row of chairs per tier, bunched against the tier's BACK edge
@@ -1932,9 +1925,7 @@ export function createFirstFloor(): THREE.Group {
 
 // Entrance foyer beyond the front opening: bright, lower-ceilinged, with an
 // orange-lit reception backdrop, sitting on a real ledge above the taller
-// hall — see
-// assets/reference/venue/ground-floor-reception-and-exhibition/entrance-hall-view-toward-reception-desk.jpg
-// and entrance-queue-stanchions-desk-bg.jpg. The ledge is a jump-up / fall-down
+// hall, matching the real venue's look. The ledge is a jump-up / fall-down
 // obstacle (see Robot.ts), not a walkable ramp.
 function createEntranceFoyer(): THREE.Group {
   const group = new THREE.Group();
@@ -2034,9 +2025,8 @@ function createEntranceFoyer(): THREE.Group {
 }
 
 // The exhibition floor's most recognizable non-generic detail: a suspended white
-// soffit with a warm amber backlit edge, marking a walkway threshold — see
-// assets/reference/venue/ground-floor-reception-and-exhibition/hall-interior-crowd-wide.jpg
-// (the angled cove-lit canopy over the crowd).
+// soffit with a warm amber backlit edge, marking a walkway threshold — matching
+// the real venue's angled cove-lit canopy over the crowd.
 function createSoffit(): THREE.Group {
   const group = new THREE.Group();
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf5f4ef });
