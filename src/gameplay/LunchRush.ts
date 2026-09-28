@@ -9,7 +9,7 @@ import { BeerTap } from '../props/beerTap';
 import { createSandwich, Sandwich } from '../props/sandwiches';
 import { createSpeechBubble, SpeechBubble } from './speechBubble';
 import { randomLunchQueueLine, randomLunchChaseLine, randomLunchCaughtReaction, randomLunchBumpReaction } from '../text/attendeeDialogue';
-import { randomGrowthToast, randomHungerLowToast, randomHungerStarvedToast, randomWobblingToast } from '../text/robotToasts';
+import { randomHungerLowToast, randomHungerStarvedToast, randomWobblingToast } from '../text/robotToasts';
 
 // Level 3 — Biggy, "Lunch Rush". Same ground-floor map as Voxxy's Swag Run,
 // redressed for lunchtime rather than a fourth separate map. Deliberately
@@ -236,11 +236,6 @@ const HUNGER_DRAIN_RAMP_DURATION = 90; // seconds to go from base to max
 // balancing table on top of SANDWICH_SCORE/SANDWICH_GROWTH.
 const HUNGER_RESTORE_PER_SANDWICH = 25;
 const HUNGER_LOW_THRESHOLD = 25; // one-shot warning toast when crossing below this
-
-// A funny one-liner toast (reusing Hud's existing showQuoteToast plumbing)
-// every few sandwiches, commenting on Biggy visibly getting bigger — see
-// src/text/robotToasts.ts's GROWTH_TOASTS for the actual lines.
-const GROWTH_TOAST_EVERY = 3; // sandwiches eaten
 
 function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
@@ -548,7 +543,6 @@ export class LunchRush {
           robot.grow(SANDWICH_GROWTH[type]);
           pickedUp = true;
           this.hunger = Math.min(HUNGER_MAX, this.hunger + HUNGER_RESTORE_PER_SANDWICH);
-          if (this.sandwichesEaten % GROWTH_TOAST_EVERY === 0) growthToast = randomGrowthToast();
 
           // Eating right next to a queued/approaching attendee provokes them
           // for sure, unlike the weaker passive proximity check below.

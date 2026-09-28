@@ -5,37 +5,24 @@
 // different. Same random-pick shape as attendeeDialogue.ts's accessors.
 
 /**
- * Biggy's own aside about visibly getting bigger — shown via
- * Hud.showQuoteToast() every GROWTH_TOAST_EVERY sandwiches (see
- * LunchRush.ts). Never a complaint, just affectionate self-directed ribbing
- * at his own expense (matches "robots are earnest" — he's in on the joke).
- */
-export const GROWTH_TOASTS = [
-  'Biggy definitely runs on mayonnaise now.',
-  'Somewhere, a structural engineer is concerned.',
-  'New personal record: forklift required.',
-  "Biggy's turning radius now has its own zip code.",
-  'At this rate, Biggy qualifies as a food group.',
-  "Biggy has entered his 'big lunch era'.",
-  'Someone should mention portion control. Too late now.',
-  "Biggy's shadow just got its own postal code.",
-];
-
-/**
  * Droid's deadpan lines shown the instant a topple starts, via
- * Hud.showQuoteToast(), same pattern as GROWTH_TOASTS above.
+ * Hud.showQuoteToast().
  */
-export const DROID_TOPPLE_TOASTS = ['...I meant to do that.', 'Systems nominal. Pride: not.'];
+export const DROID_TOPPLE_TOASTS = [
+  'Balance.exe has stopped responding.',
+  'Recalculating... from the floor.',
+  'That one is going in the post-mortem.',
+  'Core dumped. Send help.',
+];
 
 /**
  * Biggy's own aside the instant his hunger meter crosses into the low band
  * (see LunchRush.ts's HUNGER_LOW_THRESHOLD) — a warning that's still in his
  * voice rather than a bare HUD number, same "human reaction" spirit as
- * GROWTH_TOASTS above.
+ * the other toast categories in this file.
  */
 export const HUNGER_LOW_TOASTS = [
   "Biggy's stomach is staging a protest.",
-  'Somewhere, a vending machine is calling his name.',
   'Biggy could really go for a snack right about now.',
 ];
 
@@ -66,10 +53,6 @@ export const WOBBLING_TOASTS = [
 
 function pick(lines: string[]): string {
   return lines[Math.floor(Math.random() * lines.length)];
-}
-
-export function randomGrowthToast(): string {
-  return pick(GROWTH_TOASTS);
 }
 
 export function randomDroidToppleToast(): string {

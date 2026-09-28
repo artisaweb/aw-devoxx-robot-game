@@ -97,11 +97,18 @@ export const LUNCH_QUEUE_LINES = [
   'WATCH OUT, HE IS ROLLING THIS WAY.',
 ];
 
+// Two lines below were moved out of robotToasts.ts's GROWTH_TOASTS (dropped
+// entirely — those leaned too hard on Biggy's size/weight itself, read as
+// fat-shaming rather than affectionate ribbing). These two are about the
+// comedic *volume of sandwiches eaten*, not his body, so they survive here as
+// attendee reaction barks instead of Biggy's own self-directed toast.
 export const LUNCH_CHASE_LINES = [
   'HEY, THAT ONE WAS MINE!',
   'I CALLED THAT SANDWICH!',
   'EXCUSE ME, I WAS NEXT!',
   "OH NO YOU DON'T!",
+  'HE DEFINITELY RUNS ON MAYONNAISE!',
+  'SOMEBODY CALL A STRUCTURAL ENGINEER!',
 ];
 
 export const LUNCH_CAUGHT_REACTIONS = [
