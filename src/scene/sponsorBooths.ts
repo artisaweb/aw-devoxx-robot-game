@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { Collider, BOOTH_PLATFORM_ZONES } from './ExhibitionHall';
 import { SPONSOR_SIGNAGE, BELGIAN_PROVINCES } from '../text/signage';
+import { createBeerTap as createBeerTapAsset, BeerTap } from '../props/beerTap';
 
 // Seven sponsor-booth set pieces from the brainstorm in
 // assets/reference/venue/ground-floor-reception-and-exhibition/sponsor-booths.md —
@@ -1490,41 +1491,16 @@ function createOmniWareBooth(): THREE.Object3D {
 // details (see docs/game-design.md). Placed in open floor clear of the
 // column grid, both stair enclosures, and every other booth/table.
 export const BEER_TAP_POS: [number, number] = [10, 15];
+// Built from the standalone beerTap.js generator (src/props/) — a full bar
+// setup on a 4.0x3.4m deck (counter, tap, two kegs, three stools, two high
+// tables with two stools each), not the small counter+kegs+tap-tower stand
+// this used to hand-build. Collider radius recomputed for the new
+// footprint via the same diagonal-half-extent approximation every other
+// boxy prop in this file already uses: hypot(2.0, 1.7) ≈ 2.63 (was 1.3).
 // Exported so SwagRun.ts/LunchRush.ts can derive their own touch radius from
 // it (same reachability requirement as every kiosk — see COFFEE_RADIUS's own
 // comment in SwagRun.ts) instead of guessing a separate number.
-export const BEER_TAP_COLLIDER_RADIUS = 1.3;
-
-function createBeerTapStand(x: number, z: number): THREE.Object3D {
-  const group = new THREE.Group();
-  const counterMat = mat(0x5c3a21, { roughness: 0.7 });
-  const metalMat = mat(0xb0b4b8, { roughness: 0.3, metalness: 0.7 });
-  const tapMat = mat(0x2a2a2e, { roughness: 0.4, metalness: 0.5 });
-
-  const counter = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.0, 0.7), counterMat);
-  counter.position.set(x, 0.5, z);
-  group.add(counter);
-
-  for (const dx of [-0.7, 0.7]) {
-    const keg = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.85, 14), metalMat);
-    keg.position.set(x + dx, 0.425, z - 0.75);
-    group.add(keg);
-  }
-
-  const towerBase = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.3), tapMat);
-  towerBase.position.set(x, 1.25, z);
-  group.add(towerBase);
-  for (const side of [-1, 1]) {
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4, 8), tapMat);
-    handle.rotation.x = Math.PI / 2.6;
-    handle.position.set(x + side * 0.08, 1.55, z + 0.1);
-    group.add(handle);
-  }
-
-  group.add(createBoothBanner('ON TAP', 0xd4a017, x, z + 1.1));
-
-  return group;
-}
+export const BEER_TAP_COLLIDER_RADIUS = 2.63;
 
 /**
  * Ground-level solid obstacles the player and hazards both push out against.
@@ -1631,7 +1607,13 @@ export function getBoothColliders(): Collider[] {
   return colliders;
 }
 
-export function createSponsorBooths(): THREE.Object3D {
+export interface SponsorBoothsScene {
+  readonly group: THREE.Object3D;
+  /** Shared with Level 1 (SwagRun.ts) and Level 3 (LunchRush.ts) — Game.ts owns calling `.update(dt)` on this every frame and passing it into each level's own touch-trigger logic. */
+  readonly beerTap: BeerTap;
+}
+
+export function createSponsorBooths(): SponsorBoothsScene {
   const group = new THREE.Group();
   group.add(rotateBooth(createRocketMindBooth(), ROCKETMIND_ROTATION.cx, ROCKETMIND_ROTATION.cz, ROCKETMIND_ROTATION.angle));
   group.add(rotateBooth(createGogglesCloudBooth(), GOGGLES_ROTATION.cx, GOGGLES_ROTATION.cz, GOGGLES_ROTATION.angle));
@@ -1640,6 +1622,10 @@ export function createSponsorBooths(): THREE.Object3D {
   group.add(rotateBooth(createMiracleSystemsBooth(), MIRACLE_ROTATION.cx, MIRACLE_ROTATION.cz, MIRACLE_ROTATION.angle));
   group.add(rotateBooth(createTinyBooth(), TINY_ROTATION.cx, TINY_ROTATION.cz, TINY_ROTATION.angle));
   group.add(rotateBooth(createOmniWareBooth(), OMNIWARE_ROTATION.cx, OMNIWARE_ROTATION.cz, OMNIWARE_ROTATION.angle));
-  group.add(createBeerTapStand(BEER_TAP_POS[0], BEER_TAP_POS[1]));
-  return group;
+
+  const beerTap = createBeerTapAsset();
+  beerTap.object.position.set(BEER_TAP_POS[0], 0, BEER_TAP_POS[1]);
+  group.add(beerTap.object);
+
+  return { group, beerTap };
 }

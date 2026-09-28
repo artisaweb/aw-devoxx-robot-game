@@ -62,7 +62,12 @@ export class Game {
   private followCamera: FollowCamera;
   private groundFloorGroup = createExhibitionHall();
   private firstFloorGroup = createFirstFloor();
-  private sponsorBoothsGroup = createSponsorBooths();
+  private sponsorBoothsScene = createSponsorBooths();
+  private sponsorBoothsGroup = this.sponsorBoothsScene.group;
+  // Shared prop across Level 1 (SwagRun.ts) and Level 3 (LunchRush.ts) — see
+  // tick() for the per-frame .update(dt) call and each level's own
+  // update(...) call for where .activate() gets triggered on touch.
+  private beerTap = this.sponsorBoothsScene.beerTap;
   // Columns + sponsor-booth landmarks (vault door, F1 car, lion statue,
   // rope-maze stanchions) + both kiosks — both the player and Swag Run's
   // hazards route around these.
@@ -363,9 +368,12 @@ export class Game {
       if (justPressed) this.onContinue();
     } else {
       this.robot.update(dt, this.input, activeColliders);
+      // Shared across levels 1 and 3 (not level 2, where sponsorBoothsGroup
+      // is hidden anyway) — animates regardless of which level is active.
+      this.beerTap.update(dt);
 
       if (this.level === 1) {
-        const { stunned, pickedUp } = this.swagRun!.update(dt, this.robot, activeColliders);
+        const { stunned, pickedUp } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);
         if (stunned) {
           this.robot.stun(VOXXY_STUN_DURATION);
           // Purely visual — SwagRun.ts's own stunCooldown already blocks a
@@ -402,7 +410,7 @@ export class Game {
         }
         if (toppleToast) this.hud.showQuoteToast(toppleToast);
       } else {
-        const { stumbled, fell, growthToast, pickedUp } = this.lunchRun!.update(dt, this.robot, activeColliders);
+        const { stumbled, fell, growthToast, pickedUp } = this.lunchRun!.update(dt, this.robot, activeColliders, this.beerTap);
         if (fell) {
           this.robot.fallOver();
           playSfx('biggy-fall');

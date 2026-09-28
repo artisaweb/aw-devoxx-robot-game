@@ -3,8 +3,10 @@ import { HALL_WIDTH, HALL_DEPTH, Collider, LUNCH_TABLE_ZONES } from '../scene/Ex
 import { Robot, ROBOT_RADIUS, WALL_CLEARANCE } from '../entities/Robot';
 import { createGlowSprite, HALO_BASE_SIZE, BEACON_BASE_SIZE, BEACON_HEIGHT } from './swagAccessories';
 import { AttendeeArchetype, createAttendeeMesh } from './attendeeModels';
-import { createVendingMachine, createCandyMachine, Kiosk, KIOSK_COLLIDER_RADIUS } from './vendingMachine';
+import { createVendingMachine, createCandyMachine, KIOSK_COLLIDER_RADIUS, CoffeeVendingMachine, CandyGrabbingMachine } from './vendingMachine';
 import { KING_KIOSK_POS, BEER_TAP_POS, BEER_TAP_COLLIDER_RADIUS } from '../scene/sponsorBooths';
+import { BeerTap } from '../props/beerTap';
+import { createSandwich, Sandwich } from '../props/sandwiches';
 import { createSpeechBubble, SpeechBubble } from './speechBubble';
 import { randomLunchQueueLine, randomLunchChaseLine, randomLunchCaughtReaction, randomLunchBumpReaction } from '../text/attendeeDialogue';
 import { randomGrowthToast, randomHungerLowToast, randomHungerStarvedToast, randomWobblingToast } from '../text/robotToasts';
@@ -17,25 +19,29 @@ import { randomGrowthToast, randomHungerLowToast, randomHungerStarvedToast, rand
 // mode (see "finished" below), so `update()`'s return/consumption shape
 // differs from SwagRun/KnowledgeRun's.
 
-type SandwichType = 'ham' | 'veggie' | 'cheese' | 'crab';
-const COMMON_TYPES: SandwichType[] = ['ham', 'veggie', 'cheese'];
+// Built from the standalone sandwiches.js generator (src/props/) instead of
+// a hand-built shared mesh with a swappable filling color — each type has
+// its own fixed, distinct visual now, so SANDWICH_FILLING_COLOR is gone.
+// sandwiches.js ships 6 types (crab, club, cheese, ham-cheese, tuna,
+// chicken-curry) with no vegetarian match for the old 'veggie' — kept the
+// roster at 4 total (3 commons + the crab jackpot, same shape as before)
+// rather than expanding the balance-tuning surface: 'cheese' is a direct
+// rename, 'ham-cheese' takes over 'ham''s old tuning (closest match),
+// 'club' takes over 'veggie''s old slot/tuning (new visual, same numbers —
+// not a rebalance, just carrying the old values to their new type names).
+type SandwichType = 'crab' | 'club' | 'cheese' | 'ham-cheese';
+const COMMON_TYPES: SandwichType[] = ['ham-cheese', 'club', 'cheese'];
 
 // Score + growth per sandwich — eating is a self-inflicted difficulty ramp,
 // not a free good thing (see docs/game-design.md). Crab is the jackpot: best
 // score, biggest size hit, rare, and short-lived on the table (see
 // CRAB_SPAWN_CHANCE/CRAB_LIFETIME below) — a real risk/reward call.
-const SANDWICH_SCORE: Record<SandwichType, number> = { ham: 1, veggie: 1, cheese: 1, crab: 5 };
+const SANDWICH_SCORE: Record<SandwichType, number> = { 'ham-cheese': 1, club: 1, cheese: 1, crab: 5 };
 // Trimmed down from the original 0.12/0.1/0.14/0.3 (the user: "biggy is still
 // growing way too fast") — on top of Robot.grow()'s own late-run taper, since
 // a smaller flat rate is what actually slows the *early* game, when the taper
 // itself is still at full strength.
-const SANDWICH_GROWTH: Record<SandwichType, number> = { ham: 0.08, veggie: 0.07, cheese: 0.1, crab: 0.2 };
-const SANDWICH_FILLING_COLOR: Record<SandwichType, number> = {
-  ham: 0xd9758a,
-  veggie: 0x8bc34a,
-  cheese: 0xffd54f,
-  crab: 0xff6f61,
-};
+const SANDWICH_GROWTH: Record<SandwichType, number> = { 'ham-cheese': 0.08, club: 0.07, cheese: 0.1, crab: 0.2 };
 
 // Six separate small tables rather than one long buffet row — see
 // ExhibitionHall.ts's LUNCH_TABLE_ZONES for why "between" and "hall-center"
@@ -244,26 +250,16 @@ function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function createSandwichMesh(type: SandwichType): THREE.Object3D {
+/**
+ * Builds a slot's full visual: the real sandwich model (src/props/sandwiches.js)
+ * wrapped in a group with the same halo+beacon glow-sprite pair the old
+ * hand-built mesh had (a readability affordance, not part of the sandwich's
+ * own model — kept as-is rather than dropped along with the old geometry).
+ */
+function createSandwichVisual(type: SandwichType): { group: THREE.Group; sandwich: Sandwich; halo: THREE.Sprite } {
+  const sandwich = createSandwich(type);
   const group = new THREE.Group();
-  const breadMat = new THREE.MeshStandardMaterial({ color: 0xd9a55b, roughness: 0.7 });
-  const fillingMat = new THREE.MeshStandardMaterial({ color: SANDWICH_FILLING_COLOR[type], roughness: 0.5 });
-
-  const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.35), breadMat);
-  bottom.position.y = -0.09;
-  group.add(bottom);
-  const filling = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.1, 0.33), fillingMat);
-  group.add(filling);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.08, 0.35), breadMat);
-  top.position.y = 0.09;
-  group.add(top);
-
-  if (type === 'crab') {
-    // A little claw garnish so the jackpot sandwich reads distinctly at a glance.
-    const claw = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), new THREE.MeshStandardMaterial({ color: 0xff3b30 }));
-    claw.position.y = 0.2;
-    group.add(claw);
-  }
+  group.add(sandwich.object);
 
   const halo = createGlowSprite(HALO_BASE_SIZE * 0.7, type === 'crab' ? 0.85 : 0.5);
   if (type === 'crab') halo.material.color.set(0xff6f61);
@@ -271,16 +267,18 @@ function createSandwichMesh(type: SandwichType): THREE.Object3D {
   const beacon = createGlowSprite(BEACON_BASE_SIZE, 0.85);
   beacon.position.y = BEACON_HEIGHT;
   group.add(beacon);
-  group.userData.glow = halo;
-  return group;
-}
 
+  return { group, sandwich, halo };
+}
 
 interface SandwichSlot {
   x: number;
   z: number;
   type: SandwichType | null;
-  mesh: THREE.Object3D | null;
+  mesh: THREE.Object3D | null; // wrapper group added to the scene — see createSandwichVisual
+  sandwich: Sandwich | null; // same object as mesh's child — kept separately for update()/dispose()
+  halo: THREE.Sprite | null;
+  pulseTime: number; // drives the halo's own pulse — the old mesh reused its own continuous spin for this, which sandwiches.js's model doesn't have (it wiggles only while idle, not a constant spin)
   cooldown: number;
   activeTimer: number; // crab only — expires if not eaten in time
 }
@@ -379,9 +377,9 @@ const ATTENDEE_ARCHETYPES: AttendeeArchetype[] = ['live-coder', 'java-godfather'
 export class LunchRush {
   readonly group = new THREE.Group();
   private slots: SandwichSlot[] = [];
-  private javaMachine: Kiosk;
+  private javaMachine: CoffeeVendingMachine;
   private javaCooldown = 0;
-  private candyMachine: Kiosk;
+  private candyMachine: CandyGrabbingMachine;
   private candyCooldown = 0;
   private beerTapCooldown = 0;
   private crabServedCount = 0;
@@ -407,16 +405,16 @@ export class LunchRush {
     // only adds the sandwich-slot/kiosk logic on top of them.
 
     for (const [x, z] of SLOT_POSITIONS) {
-      this.slots.push({ x, z, type: null, mesh: null, cooldown: Math.random() * SLOT_RESPAWN_COOLDOWN, activeTimer: 0 });
+      this.slots.push({ x, z, type: null, mesh: null, sandwich: null, halo: null, pulseTime: 0, cooldown: Math.random() * SLOT_RESPAWN_COOLDOWN, activeTimer: 0 });
     }
 
     this.javaMachine = createVendingMachine();
-    this.javaMachine.group.position.set(JAVA_MACHINE_POS[0], 0, JAVA_MACHINE_POS[1]);
-    this.group.add(this.javaMachine.group);
+    this.javaMachine.object.position.set(JAVA_MACHINE_POS[0], 0, JAVA_MACHINE_POS[1]);
+    this.group.add(this.javaMachine.object);
 
     this.candyMachine = createCandyMachine();
-    this.candyMachine.group.position.set(KING_KIOSK_POS[0], 0, KING_KIOSK_POS[1]);
-    this.group.add(this.candyMachine.group);
+    this.candyMachine.object.position.set(KING_KIOSK_POS[0], 0, KING_KIOSK_POS[1]);
+    this.group.add(this.candyMachine.object);
   }
 
   /** Live snapshot for the minimap — a slot with no current sandwich reads as "collected" (hidden dot). */
@@ -483,7 +481,7 @@ export class LunchRush {
   }
 
   /** Advances the endless round. Returns whether Biggy stumbled (recoverable) or fell (permanent, see Robot.fallOver), plus an optional growth-milestone toast. */
-  update(dt: number, robot: Robot, colliders: Collider[]): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean } {
+  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean } {
     if (this.finished) return { stumbled: false, fell: false, pickedUp: false };
 
     this.survivedTime += dt;
@@ -521,20 +519,21 @@ export class LunchRush {
 
     // Sandwich table: each slot independently empties and restocks.
     for (const slot of this.slots) {
-      if (slot.type && slot.mesh) {
-        slot.mesh.rotation.y += dt * 1.5;
-        const glow = slot.mesh.userData.glow as THREE.Sprite | undefined;
-        if (glow) {
-          const pulse = 0.85 + 0.15 * Math.sin(slot.mesh.rotation.y * 2);
-          glow.scale.set(HALO_BASE_SIZE * 0.7 * pulse, HALO_BASE_SIZE * 0.7 * pulse, 1);
-        }
+      if (slot.type && slot.mesh && slot.sandwich && slot.halo) {
+        slot.sandwich.update(dt);
+        slot.pulseTime += dt;
+        const pulse = 0.85 + 0.15 * Math.sin(slot.pulseTime * 3);
+        slot.halo.scale.set(HALO_BASE_SIZE * 0.7 * pulse, HALO_BASE_SIZE * 0.7 * pulse, 1);
 
         if (slot.type === 'crab') {
           slot.activeTimer -= dt;
           if (slot.activeTimer <= 0) {
             // Nobody grabbed it in time — it's gone, same as it disappearing to another attendee.
+            slot.sandwich.dispose();
             this.group.remove(slot.mesh);
             slot.mesh = null;
+            slot.sandwich = null;
+            slot.halo = null;
             slot.type = null;
             slot.cooldown = SLOT_RESPAWN_COOLDOWN;
             continue;
@@ -568,8 +567,14 @@ export class LunchRush {
             }
           }
 
+          // Eaten instantly (matches the existing arcade-quick feel, same as
+          // the coffee/candy machines) — no time to see sandwiches.js's own
+          // hop-spin activate() before removal, so it's not triggered here.
+          slot.sandwich.dispose();
           this.group.remove(slot.mesh);
           slot.mesh = null;
+          slot.sandwich = null;
+          slot.halo = null;
           slot.type = null;
           slot.cooldown = SLOT_RESPAWN_COOLDOWN;
         }
@@ -578,48 +583,59 @@ export class LunchRush {
         if (slot.cooldown <= 0) {
           const crabAvailable = this.crabServedCount < CRAB_SERVE_LIMIT;
           const type: SandwichType = crabAvailable && Math.random() < CRAB_SPAWN_CHANCE ? 'crab' : pick(COMMON_TYPES);
-          const mesh = createSandwichMesh(type);
-          mesh.position.set(slot.x, 0.85, slot.z);
-          this.group.add(mesh);
-          slot.mesh = mesh;
+          const { group, sandwich, halo } = createSandwichVisual(type);
+          group.position.set(slot.x, 0.85, slot.z);
+          this.group.add(group);
+          slot.mesh = group;
+          slot.sandwich = sandwich;
+          slot.halo = halo;
+          slot.pulseTime = 0;
           slot.type = type;
           slot.activeTimer = type === 'crab' ? CRAB_LIFETIME : 0;
         }
       }
     }
 
+    this.javaMachine.update(dt);
     this.javaCooldown = Math.max(0, this.javaCooldown - dt);
     const javaAvailable = this.javaCooldown <= 0;
-    this.javaMachine.setAvailable(javaAvailable);
+    this.javaMachine.setOutOfStock(!javaAvailable);
     if (javaAvailable) {
       const dx = robotX - JAVA_MACHINE_POS[0];
       const dz = robotZ - JAVA_MACHINE_POS[1];
       if (dx * dx + dz * dz < COFFEE_RADIUS * COFFEE_RADIUS) {
         robot.restoreEnergy(COFFEE_BOOST);
         this.javaCooldown = COFFEE_COOLDOWN;
+        // Fire-and-forget — see SwagRun.ts's identical coffee-machine comment.
+        if (!this.javaMachine.busy) void this.javaMachine.activate();
       }
     }
 
+    this.candyMachine.update(dt);
     this.candyCooldown = Math.max(0, this.candyCooldown - dt);
     const candyAvailable = this.candyCooldown <= 0;
-    this.candyMachine.setAvailable(candyAvailable);
+    this.candyMachine.setOutOfStock(!candyAvailable);
     if (candyAvailable) {
       const dx = robotX - KING_KIOSK_POS[0];
       const dz = robotZ - KING_KIOSK_POS[1];
       if (dx * dx + dz * dz < CANDY_RADIUS * CANDY_RADIUS) {
         robot.restoreEnergy(CANDY_ENERGY_BOOST);
         this.candyCooldown = CANDY_COOLDOWN;
+        if (!this.candyMachine.busy) void this.candyMachine.activate();
       }
     }
 
     this.beerTapCooldown = Math.max(0, this.beerTapCooldown - dt);
-    if (this.beerTapCooldown <= 0) {
+    const beerTapAvailable = this.beerTapCooldown <= 0;
+    beerTap.setOutOfStock(!beerTapAvailable);
+    if (beerTapAvailable) {
       const dx = robotX - BEER_TAP_POS[0];
       const dz = robotZ - BEER_TAP_POS[1];
       if (dx * dx + dz * dz < BEER_TAP_RADIUS * BEER_TAP_RADIUS) {
         this.hunger = Math.min(HUNGER_MAX, this.hunger + HUNGER_RESTORE_PER_SANDWICH);
         robot.applyTipsy(BEER_TAP_TIPSY_DURATION);
         this.beerTapCooldown = BEER_TAP_COOLDOWN;
+        if (!beerTap.busy) void beerTap.activate();
       }
     }
 
@@ -710,8 +726,11 @@ export class LunchRush {
             // empty-handed rather than idling to look for a second target.
             const slot = this.slots.find((s) => s.x === d.targetX && s.z === d.targetZ);
             if (slot && slot.type && slot.mesh) {
+              slot.sandwich?.dispose();
               this.group.remove(slot.mesh);
               slot.mesh = null;
+              slot.sandwich = null;
+              slot.halo = null;
               slot.type = null;
               slot.cooldown = SLOT_RESPAWN_COOLDOWN;
             }
