@@ -16,7 +16,7 @@ import { randomGripe, randomHitReaction } from '../text/attendeeDialogue';
 // BOOTH_PLATFORM_ZONES) rather than the hall floor — collecting it requires
 // actually standing at that height, not just walking underneath (see the
 // y-check in the pickup loop below).
-// Each booth has its own signature swag type (see swagAccessories.md) — the
+// Each booth has its own signature swag type — the
 // Goggles Cloud desk-top pickup mirrors RocketMind's jump-desk pickup
 // exactly, same zone system, so it carries the same reachability guarantee.
 // Positions below were moved alongside their booths for the 1.5x hall
@@ -50,8 +50,7 @@ const SWAG_ITEM_DEFS: { pos: [number, number]; type: SwagType; groundY?: number 
   // 'shirt' pickup that had drifted to sit right next to Goggles Cloud's
   // own desk (wrong booth's branding — shirt is Tiny's teal/text design, not
   // Goggles Cloud's). Both removed: sunglasses and shirt are now visibly
-  // branded to one specific sponsor each (swagAccessories.md's 2026-09-28
-  // update), so a stray or misplaced instance reads as a real mistake, not
+  // branded to one specific sponsor each, so a stray or misplaced instance reads as a real mistake, not
   // a harmless duplicate — unlike sticker, which stays intentionally
   // generic and can appear anywhere.
   { pos: [8, -15], type: 'sticker' },
@@ -109,14 +108,14 @@ const BEER_TAP_COOLDOWN = 8; // re-trigger guard, same shape as the kiosks above
 // touching one "splashes" the robot. Each gets an initial position + heading;
 // they bounce off the hall walls (the full HALL_WIDTH/HALL_DEPTH extent, not
 // a local territory) and turn a little at random so their paths aren't
-// perfectly predictable. Each is a distinct "conference hero" archetype
-// (see docs/game-design.md — generic, only loosely inspired by real speakers'
-// style, never a likeness) rather than an identical blue capsule.
+// perfectly predictable. Each is a distinct "conference hero" archetype —
+// generic, only loosely inspired by real speakers' style, never a likeness —
+// rather than an identical blue capsule.
 //
 // Spread one per quadrant of the (since-enlarged) hall rather than clustered
-// in a small central box (was x=[-15,15], z=[-5,12] — todo.md: "Booths/
-// kiosks/pickups moved [for the 1.5x hall resize], but hazard spawn/wander
-// positions were not touched in this pass"). Random-walk wander diffuses
+// in a small central box (was x=[-15,15], z=[-5,12] — booths/kiosks/pickups
+// moved for the 1.5x hall resize, but hazard spawn/wander positions weren't
+// touched in that pass). Random-walk wander diffuses
 // slowly relative to a round's length, so the old cluster left the outer
 // thirds of the map — where booths/pickups now actually are — with far less
 // hazard traffic than the center. Positions offset from round multiples of

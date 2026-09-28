@@ -3,10 +3,9 @@
 // functions) and kiosk labels/status text (see gameplay/vendingMachine.ts's
 // createKiosk() configs). Same "inspired by, never copied" rule as the robot
 // models; same tone rule as attendeeDialogue.ts — nothing here should read
-// as a real complaint about a real sponsor. See docs/game-design.md's tone
-// pass, and re-check every pass (past corrections: Smals, Oracle, Vaultius)
-// — "industry-wide humor" can still land as a genuine complaint about that
-// specific sponsor.
+// as a real complaint about a real sponsor. Re-check every pass (past
+// corrections: Smals, Oracle, Vaultius) — "industry-wide humor" can still
+// land as a genuine complaint about that specific sponsor.
 
 export const SPONSOR_SIGNAGE = {
   rocketMind: { name: 'RocketMind', tagline: 'The IDE of 2040' },

@@ -30,19 +30,17 @@ import { isLocalHost } from '../util/env';
 
 // Personal-best total, kept in localStorage — per-browser, not a shared
 // leaderboard, so it not mattering that it's trivially editable via devtools
-// is a feature of the design, not an oversight (see docs/game-design.md's
-// "A Day at Devoxx end screen" entry for the full reasoning).
+// is a feature of the design, not an oversight.
 const BEST_SCORE_KEY = 'dayAtDevoxx.bestScore';
 // Seconds remaining at which the timer-low SFX fires (Levels 1-2 only —
 // Level 3 has no timer). One-shot on crossing this, not a per-second replay.
 const TIMER_LOW_THRESHOLD = 5;
 
-// Three sequential single-robot levels, not one shared world (see
-// docs/game-design.md "Level structure") — Level 1 is Voxxy's Swag Run on
-// the ground floor, Level 2 is Droid's Knowledge Run on the first floor,
-// Level 3 is Biggy's Lunch Rush back on the ground floor, redressed for
-// lunchtime. All three now have their own real 3D model/rig/clips (see
-// docs/genai-log.md) — a single Robot instance persists across all three
+// Three sequential single-robot levels, not one shared world — Level 1 is
+// Voxxy's Swag Run on the ground floor, Level 2 is Droid's Knowledge Run on
+// the first floor, Level 3 is Biggy's Lunch Rush back on the ground floor,
+// redressed for lunchtime. All three now have their own real 3D
+// model/rig/clips — a single Robot instance persists across all three
 // levels, switching which model it wears via setRobotModel() at each
 // transition below, rather than spawning a separate character per robot;
 // only the map, the running minigame, and the HUD copy change otherwise.
@@ -125,7 +123,7 @@ export class Game {
   // Voxxy's and Droid's final scores, captured at each level hand-off since
   // their runs get torn down before the day ends — Biggy's is read live from
   // lunchRun.score instead, since nothing tears that down until the day
-  // actually ends. See docs/game-design.md's "A Day at Devoxx end screen".
+  // actually ends.
   private dayScore = { voxxy: 0, droid: 0 };
   // Computed once, the first frame Level 3 reports finished (see tick()) —
   // caching it avoids recomputing/re-writing localStorage every frame while
@@ -286,8 +284,7 @@ export class Game {
    * whole day and updates the personal-best record. Type/shape validation
    * only on the stored value, not a magnitude "is this plausible" check:
    * Level 3 is endless by design, so there's no real ceiling to compare
-   * against (see docs/game-design.md's "A Day at Devoxx end screen" entry).
-   * This is a per-browser personal best, not a shared leaderboard, so it not
+   * against. This is a per-browser personal best, not a shared leaderboard, so it not
    * mattering that it's trivially editable via devtools is by design.
    */
   private finalizeDayEnd(): DayEndSummary {

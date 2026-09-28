@@ -3,11 +3,10 @@ import * as THREE from 'three';
 // Each swag pickup has a concrete identity (not just "the Nth item collected"):
 // the world pickup, the worn accessory, and whatever a hazard steals are all
 // built from the same geometry, so what you see on the ground is exactly what
-// ends up worn. Seven types, one signature item per booth (see
-// swagAccessories.md's revision) — cap and crown share the same
-// head anchor and are mutually exclusive (HEAD_SLOT_TYPES below); key and
-// drone are worn at a fixed, static spot rather than tracking any moving
-// limb (see swagAccessories.md's note on why hand-tracking isn't worth it).
+// ends up worn. Seven types, one signature item per booth — cap and crown
+// share the same head anchor and are mutually exclusive (HEAD_SLOT_TYPES
+// below); key and drone are worn at a fixed, static spot rather than
+// tracking any moving limb, since hand-tracking isn't worth the complexity.
 export type SwagType = 'cap' | 'shirt' | 'sunglasses' | 'sticker' | 'crown' | 'key' | 'drone';
 
 /** KING's crown and Miracle Systems' cap both want the head anchor — wearing
@@ -349,8 +348,7 @@ function buildShirt(radius: number): THREE.Object3D {
   // a safe margin at a glance but was actually *inside* the surface by a
   // hair, silently hiding the print inside the torso mesh. Confirmed with a
   // standalone geometry check (no browser needed) after this shipped
-  // invisible in every profile without the DOM erroring: see
-  // swagAccessories.md.
+  // invisible in every profile without the DOM erroring.
   const print = new THREE.Mesh(
     new THREE.PlaneGeometry(radius * 1.3, radius * 0.8),
     new THREE.MeshBasicMaterial({ map: getTinyShirtTextTexture(), transparent: true, side: THREE.DoubleSide }),
@@ -445,7 +443,7 @@ function buildCrown(): THREE.Object3D {
 
 // Vaultius's signature item — the same bronze key shape as its counter
 // display (createDisplayKey in sponsorBooths.ts), worn at a fixed angle
-// rather than tracking a moving hand (see swagAccessories.md).
+// rather than tracking a moving hand.
 function buildKey(): THREE.Object3D {
   const group = new THREE.Group();
   const bronze = new THREE.MeshStandardMaterial({ color: BRONZE, roughness: 0.3, metalness: 0.8 });
@@ -463,7 +461,7 @@ function buildKey(): THREE.Object3D {
 
 // RocketMind's signature item — a small hovering drone, worn at a fixed
 // spot above/behind the head rather than actually following Voxxy in world
-// space (see swagAccessories.md's note on why that'd be a separate system).
+// space, since real tracking would be a separate system.
 function buildDrone(): THREE.Object3D {
   const group = new THREE.Group();
   const bodyMat = new THREE.MeshStandardMaterial({ color: DRONE_BODY_COLOR, roughness: 0.4, metalness: 0.5 });
@@ -544,8 +542,7 @@ const VOXXY_SPOTS: WornSpots = {
 // `mesh.matrixWorld` alone, which ignores bone transforms entirely and gave
 // a bogus ~1.7 total height; skinning bone matrices in by hand, the same
 // way the vertex shader does, gives the real, currently-posed shape) at
-// several heights — see swagAccessories.md for the method and the full
-// silhouette table this was read off of. Model's own
+// several heights. Model's own
 // landmarks (world Y, robot at y=0): overall height ~2.89, hips/legs wide
 // (~1.1 radius) up to ~0.6, torso narrowing through ~0.9-1.2, narrowest at
 // the neck ~1.5, head widening from ~1.8 to its widest ~2.1-2.4, tapering
