@@ -5,7 +5,7 @@
 # Procedural sound-effect generator for the game. Every sound is built from
 # scratch out of oscillators, seeded noise and formant resonators — no samples,
 # no ML models, no datasets — so the generated WAVs are original content under
-# the repo's MIT license. Written with Claude (see docs/genai-log.md).
+# the repo's MIT license. Written with Claude.
 #
 # Usage:   python3 tools/gen_sfx.py            (needs only numpy)
 # Output:  public/audio/*.wav  (44.1 kHz, 16-bit, mono)

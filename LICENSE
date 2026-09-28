@@ -19,13 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This license covers the original source code in this repository. It does not
-extend broader rights than the applicable third-party terms over content this
-project did not originally author: AI-generated 3D model assets (see
-`docs/genai-log.md` for exactly which tool generated each one and under what
-terms) and the reference materials under `assets/reference/` (excluded from
-this repository — see `.gitignore` — since the competition's own rules
-prohibit redistributing them).
