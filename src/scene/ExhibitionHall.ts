@@ -2783,6 +2783,23 @@ export function createFirstFloor(): THREE.Group {
       // isInClearZone, so this only ever drops the one pair standing in it.
       { z: HALLWAY_DOOR_Z_POSITIONS[1], halfZ: AUDITORIUM_ENTRANCE_GAP_HALF },
     ],
+    // The near half of the corridor — the frontage of the two near-end door
+    // pairs, rooms 3/10 and 4/9 — loses its tables and chairs entirely (the
+    // user: "the CinematicHallway is full of chairs and tables at the side,
+    // would remove them close to room 2, 4, 9 and 10"). This is where the
+    // level opens and where Room 4's doorway is, so it's the stretch the
+    // clutter actually reads in. Furniture only: the fabric pillars are this
+    // hall's whole light source, so they stay (that's why this isn't another
+    // clearZones entry).
+    furnitureClearZones: [
+      {
+        z: (HALLWAY_DOOR_Z_POSITIONS[0] + HALLWAY_DOOR_Z_POSITIONS[1]) / 2,
+        // Both door pairs' own spacing, plus a table-and-a-bit past each so
+        // the band doesn't stop dead on a door's centreline and leave one
+        // lonely pair standing just outside it.
+        halfZ: (HALLWAY_DOOR_Z_POSITIONS[0] - HALLWAY_DOOR_Z_POSITIONS[1]) / 2 + 12,
+      },
+    ],
     // Every pillar lit, not just every other pair (the user: "some pilars are
     // not lighting up") — at only 10 pillar pairs total in this hall, 20
     // live lights is well within budget; the density knob stays configurable
