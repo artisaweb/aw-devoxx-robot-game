@@ -3,19 +3,40 @@
 Every item below is its own commit, newest last, so any one of them can be reverted on its own
 without touching the others. `npm run build` passes at every commit.
 
+**The ten tasks**
+
 ```
 d28cd4e  Freeze each level until the player presses a control key   (pre-existing WIP, not my task)
 f04d4fc  Add the DEVOXX letters and dress Room 4 with event branding (tasks 1 + 2)
 093a215  Spread the Level 2 knowledge nuggets across the whole floor (task 3)
 287951a  Send Level 3 diners to every table, and stop them living on one (task 4)
+c803329    ^ fixes 287951a, which only half worked — see "What testing found"
 ccd9da0  Make Level 3's hunger bar a pressure you actually watch      (task 5)
 3ac2c4a  Give a grown Biggy a visible teeter                          (task 6)
 d4e5620  Add the two mid-corridor staircases to Level 2              (task 8)
 27363b9  Split sponsorBooths.ts into one module per booth            (task 10)
-a324712  Fix ?level=3 debug placement dropping the robot on the first floor (found on the way)
 5ce87c4  Rewrite the README with screenshots and real detail          (task 9)
-d774540  Add todo.md with this pass's assumptions and what needs review
-c803329  Make Level 3's diner steering actually reach the outer tables (fixes 287951a — see "What testing found")
+```
+
+**Bugs found by testing, and fixed**
+
+```
+a324712  ?level=3 debug placement dropped the robot on the first floor
+395b140  Keep Level 2's attendees out of the new stairwells (a regression d4e5620 introduced)
+0154068  Drop three Level 2 hazards that never moved — see below
+2cd9d62  Scale Biggy's food reach with his size (4 of 10 slots went unreachable at full size)
+7fe6ed8  Make Room 4's stage a real platform you have to jump onto
+a323450  Stand the DEVOXX letters on the Room 4 podium
+```
+
+**Cleanup**
+
+```
+88afba5  Remove dead code: the unused booth banner, a deprecated alias, an unused const
+53afea3  Remove the unused door-teleport subsystem
+4af574d  Correct the hallway letters' clearance comment with the measured value
+b28443b  Fix AGENTS.md where this pass made it wrong
+95a0298 / 0e32dda / fbd1c9c   the stream quote — swapped, rewritten, then restored on your call
 ```
 
 ## What testing found
@@ -75,21 +96,28 @@ fallen robot, a toppled one, and any robot that never grew all read exactly 0 �
 so Voxxy and Droid are genuinely untouched. What's still unverified is only
 whether ~14° *looks* right.
 
-## A pre-existing bug I found but did NOT fix
+## A pre-existing bug, since fixed
 
-**Three of Level 2's ten attendees spawn outside the map.** `HAZARD_START` in
-`KnowledgeRun.ts` seeds one hazard per auditorium, but only Room 4 was ever
-built — the other three entries are labelled "Room 9", "Room 5's door slot" and
-"Room 8's door slot" for rooms that don't exist. Their positions `(6, -24)`,
-`(-28, -54)` and `(6, -54)` are outside every walkable zone, so
-`getFirstFloorHeightAt` returns 0 and they sit in the void below the floor.
+**Three of Level 2's ten attendees spawned outside the map** — fixed in
+`0154068`. `HAZARD_START` in `KnowledgeRun.ts` seeded one hazard per
+auditorium, but only Room 4 was ever built; the other three entries were
+labelled "Room 9", "Room 5's door slot" and "Room 8's door slot" for rooms that
+don't exist. Their positions `(6, -24)`, `(-28, -54)` and `(6, -54)` fell
+outside every walkable zone, so `getFirstFloorHeightAt` returned 0 and they sat
+in the void below the floor.
 
-Verified this predates everything in this pass: identical before and after my
-changes. In practice Level 2 has been running with 7 working hazards, not 10.
+Measured before touching it: those three **never moved a single centimetre** in
+a full 32s round, because every candidate step failed the `isOnFirstFloor`
+check and bounced them in place. They were frozen meshes 4.5m under the floor,
+outside the walls — invisible, and doing nothing.
 
-I left it alone because fixing it changes the level's difficulty by ~40%, which
-is your call, not mine. The fix is small — move those three onto the corridor,
-or drop them and reword the comment. Say which and I'll do it.
+So Level 2 has *always* played with seven working hazards, not ten, and this
+predates everything else in this pass (verified identical before and after).
+Deleting the three changes nothing a player can see. I chose that over
+relocating them into the corridor, which would have been a real ~40% difficulty
+increase on a level nobody has ever actually played that way — that one is a
+design call, and the comment now records where to re-add them if rooms 5, 8 and
+9 ever get built.
 
 ## Things I decided for you
 
