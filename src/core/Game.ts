@@ -559,7 +559,7 @@ export class Game {
       );
     }
 
-    this.hud.updateDebugCoords(this.robot.position.x, this.robot.position.z, this.robot.heading, this.level);
+    this.hud.updateDebugCoords(this.robot.position.x, this.robot.position.y, this.robot.position.z, this.robot.heading, this.level);
     this.hud.setModelLoading(this.robot.isLoadingModel, this.robot.loadingRobotId);
 
     const cameraCollidables =

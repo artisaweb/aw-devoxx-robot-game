@@ -255,15 +255,26 @@ export class Hud {
     }
   }
 
-  /** Local-only readout (see isLocalHost()) of the robot's live position — a no-op in a hosted build. */
-  updateDebugCoords(x: number, z: number, headingRad: number, level: 1 | 2 | 3): void {
+  /**
+   * Local-only readout (see isLocalHost()) of the robot's live position — a
+   * no-op in a hosted build.
+   *
+   * `y` is shown but deliberately not stored in lastDebugState: the copied
+   * debug URL carries only x/z/heading, because y is always derived from the
+   * floor's own height function rather than taken from the URL. It's on the
+   * readout because standing somewhere and reading back the height the game
+   * actually gave you is the only cheap way to check a tiered or stepped
+   * surface (auditorium rows, either staircase) against the height function
+   * that's supposed to describe it.
+   */
+  updateDebugCoords(x: number, y: number, z: number, headingRad: number, level: 1 | 2 | 3): void {
     if (!this.debugCoordsEl) return;
     this.lastDebugState = { x, z, headingRad, level };
     // Leave the click's "Copied!" feedback up for its full window instead of
     // stomping it the very next frame (this runs every tick).
     if (performance.now() < this.debugCopyFeedbackUntil) return;
     const headingDeg = Math.round(((headingRad * 180) / Math.PI) % 360);
-    this.debugCoordsEl.textContent = `L${level} x:${x.toFixed(1)} z:${z.toFixed(1)} h:${headingDeg}°`;
+    this.debugCoordsEl.textContent = `L${level} x:${x.toFixed(1)} y:${y.toFixed(2)} z:${z.toFixed(1)} h:${headingDeg}°`;
   }
 
   /** Briefly shows a piece of collected knowledge (or any short toast text). */
