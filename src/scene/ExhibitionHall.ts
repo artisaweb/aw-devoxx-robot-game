@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CinematicHallway } from './CinematicHallway';
 import { createDevoxxLetters, DevoxxLetters } from '../props/devoxxLetters';
+import { createRobotChargingDock, RobotChargingDock } from '../props/robotChargingDock';
 import { EVENT_SIGNAGE } from '../text/signage';
 
 // Rough blockout proportions from the real venue's floor plan
@@ -1056,6 +1057,7 @@ export function createExhibitionHall(): THREE.Group {
   // (and a live, still-ticking prop) for a set of letters no longer in any
   // scene, same reason hallwayInstance is reassigned rather than collected.
   clearDevoxxLetters('ground');
+  clearChargingDocks('ground');
 
   // Colors from the real venue: the exhibition floor reads bright and open
   // (white walls/columns, mid-gray carpet) under a tall black ceiling void —
@@ -1115,6 +1117,27 @@ export function createExhibitionHall(): THREE.Group {
   for (const zone of LUNCH_TABLE_ZONES) {
     hall.add(createLunchTable(zone.x, zone.z, zone.halfW * 2, zone.halfD * 2));
   }
+
+  // The ground floor's one charging dock, in the entrance half. Both this
+  // floor's levels already have two energy sources each, but all of them sit in
+  // the hall's middle and back — the coffee machine at (0, -8), JAVA at
+  // (-11, -13), KING's candy claw way over at (37, -4) — so the whole entrance
+  // end had none.
+  //
+  // Tucked into the hall's front-right corner rather than standing in the open
+  // floor, per the user ("a bit more to the wall / in a corner"): 5m off each
+  // wall, turned 225° so the column backs into the corner and the pad faces
+  // out into the hall on the diagonal you actually approach from. That also
+  // keeps it clear of everything around it — 7m to the column at (35, 20), 10m
+  // to Goggles Cloud's desk at (30, 24).
+  //
+  // Column positions are worth checking against rather than eyeballing:
+  // buildColumnPositions lays them at x = ±5/±15/±25/±35 and z = 0/±10/±20 (a
+  // margin of one COLUMN_SPACING off each wall, so *not* on the round tens). A
+  // first attempt at (16, 21) sat 1.4m from the column at (15, 20) — inside
+  // that column's own push-out, which left the dock unreachable and half-buried
+  // in it.
+  addChargingDock(hall, 'ground', { x: 40, y: 0, z: 25, rotationY: Math.PI * 1.25 });
 
   return hall;
 }
@@ -1295,6 +1318,140 @@ export function getDevoxxLetterColliders(floor: Floor): Collider[] {
  * Restoring the collider is what makes this more than cosmetic: without it a
  * letter would stand back up as something the robot walks straight through.
  */
+// Robot charging docks (src/props/robotChargingDock.js) — stand on the pad and
+// energy accrues while you stay there. A venue fixture rather than one level's
+// prop, so this file owns them the same way it owns the DEVOXX letters, not the
+// way SwagRun.ts owns its own coffee machine.
+//
+// Why they exist at all, and why the first floor gets three to the ground
+// floor's one: Level 1 has the coffee machine and KING's candy claw, Level 3
+// has JAVA and the same claw, and Level 2 had *nothing* — no energy source
+// anywhere on the first floor. That's the level where energy is the actual
+// currency: Room 4 is 16 jump-gated rows at JUMP_ENERGY_COST (20) each, 320
+// against a 100 cap, so reaching the back row was gated on standing still
+// waiting out ENERGY_REGEN_RATE while ten hazards roam a 32s round.
+//
+// Deliberately no cooldown, unlike the kiosks. Those hand over a flat amount on
+// touch, so they need a re-trigger guard; a dock's cost is the seconds you
+// spend standing on it, which limits it by itself and is the whole point —
+// stopping to charge with hazards closing is the decision. Brushing past at a
+// run gives a small top-up, stopping gives a full bar.
+const DOCK_ENERGY_PER_SECOND = 40; // plus the passive ENERGY_REGEN_RATE (18) running alongside, so a full bar is a ~1.7s stop
+// The prop is authored at real-world scale — a 1.2m pad and a 1.45m column —
+// which put it under the robot's own eyeline and read as a toy beside him (the
+// user: "it could also be a bit bigger, now it is rather small compared to the
+// robot"). 1.5x gives an 1.8m pad he stands on comfortably and a 2.2m column
+// that reads as a real fixture. Applied to the whole Object3D rather than
+// threaded through the generator's own dimensions, so the model stays byte-for-
+// byte the playground's; everything collision-related below multiplies by the
+// same factor rather than re-measuring, and the pad stays 10cm high — still
+// under AUTO_STEP_HEIGHT, so it's walked onto rather than jumped.
+const DOCK_SCALE = 1.5;
+
+interface PlacedChargingDock {
+  floor: Floor;
+  x: number;
+  z: number;
+  /** The surface the pad sits on — same reason the letters track theirs (a mover on another level can't use this one). */
+  baseY: number;
+  prop: RobotChargingDock;
+  padRadius: number;
+}
+const placedChargingDocks: PlacedChargingDock[] = [];
+const groundFloorDockColliders: Collider[] = [];
+const firstFloorDockColliders: Collider[] = [];
+
+/** Where each dock stands on `floor`, for the HUD's own minimap markers — read from what was actually built, like every other list in this file. */
+export function getChargingDockMarkers(floor: Floor): { x: number; z: number }[] {
+  return placedChargingDocks.filter((d) => d.floor === floor).map((d) => ({ x: d.x, z: d.z }));
+}
+
+/** Colliders for every dock's column (never its pad — that's 7cm, under AUTO_STEP_HEIGHT, and is meant to be stood on). */
+export function getChargingDockColliders(floor: Floor): Collider[] {
+  return floor === 'ground' ? groundFloorDockColliders : firstFloorDockColliders;
+}
+
+function clearChargingDocks(floor: Floor): void {
+  for (let i = placedChargingDocks.length - 1; i >= 0; i--) {
+    if (placedChargingDocks[i].floor === floor) placedChargingDocks.splice(i, 1);
+  }
+  (floor === 'ground' ? groundFloorDockColliders : firstFloorDockColliders).length = 0;
+}
+
+/** Plants one charging dock, pad facing +z before `rotationY` turns it, and registers its column as a real collider. */
+function addChargingDock(
+  group: THREE.Group,
+  floor: Floor,
+  placement: { x: number; y: number; z: number; rotationY: number },
+): void {
+  const dock = createRobotChargingDock();
+  dock.object.position.set(placement.x, placement.y, placement.z);
+  dock.object.rotation.y = placement.rotationY;
+  dock.object.scale.setScalar(DOCK_SCALE);
+  group.add(dock.object);
+
+  // Same local-offset rotation the letters use: (x, z) about y by θ — but every
+  // local offset is scaled first, since the group it belongs to is.
+  const cos = Math.cos(placement.rotationY);
+  const sin = Math.sin(placement.rotationY);
+  const col = dock.columnCollider;
+  const colX = col.x * DOCK_SCALE;
+  const colZ = col.z * DOCK_SCALE;
+  (floor === 'ground' ? groundFloorDockColliders : firstFloorDockColliders).push({
+    x: placement.x + colX * cos + colZ * sin,
+    z: placement.z - colX * sin + colZ * cos,
+    radius: col.radius * DOCK_SCALE,
+  });
+
+  placedChargingDocks.push({
+    floor,
+    x: placement.x,
+    z: placement.z,
+    baseY: placement.y,
+    prop: dock,
+    padRadius: dock.padRadius * DOCK_SCALE,
+  });
+}
+
+/**
+ * Ticks every dock on `floor` and returns the energy the mover earned this
+ * frame — this file can't import Robot.ts (circular; Robot.ts imports plenty
+ * from here), so the caller applies it via robot.restoreEnergy().
+ *
+ * The reach is `padRadius + MOVER_CLEARANCE * sizeScale`, derived rather than
+ * picked, and the derivation is forced by the model: the column stands only
+ * 0.73m behind the pad's centre while its collider holds a mover
+ * `radius + MOVER_CLEARANCE * sizeScale` away, so nothing can ever physically
+ * occupy the pad's centre — an ungrown robot stops about 0.68m in front of it,
+ * and Biggy at MAX_SIZE_SCALE a full 2.6m out. A literal "is it on the pad"
+ * test would therefore work for nobody, and a fixed radius would quietly stop
+ * working as Biggy grows, exactly the bug LunchRush's groundReachFor() and
+ * COFFEE_RADIUS were both written to fix ("i was running into it and it did
+ * nothing"). Scaling by the same term that pushes him back keeps the two in
+ * step at every size.
+ */
+export function updateChargingDocks(
+  dt: number,
+  floor: Floor,
+  mover?: { x: number; y: number; z: number; sizeScale: number },
+): number {
+  let energy = 0;
+  for (const dock of placedChargingDocks) {
+    if (dock.floor !== floor) continue;
+    dock.prop.update(dt);
+    if (!mover || Math.abs(mover.y - dock.baseY) > 1.0) continue;
+    const reach = dock.padRadius + MOVER_CLEARANCE * mover.sizeScale;
+    const dx = mover.x - dock.x;
+    const dz = mover.z - dock.z;
+    if (dx * dx + dz * dz > reach * reach) continue;
+    energy += DOCK_ENERGY_PER_SECOND * dt;
+    // Visual only, and fire-and-forget: the cycle runs ~8s while a charge here
+    // is usually over in under two, so it finishes after the robot has gone.
+    if (!dock.prop.busy) void dock.prop.activate();
+  }
+  return energy;
+}
+
 export function resetDevoxxLetters(): void {
   for (const placed of placedDevoxxLetters) {
     placed.prop.reset();
@@ -2180,6 +2337,36 @@ function buildAuditorium(
     rotationY: 0,
   });
 
+  // A charging dock on the flat apron, at the foot of the climb — the most
+  // valuable of the four by a distance (see DOCK_ENERGY_PER_SECOND's own
+  // comment). Every row above costs a 20-energy jump against a 100 cap, so
+  // without this the only way to refill mid-room was to stand still and wait
+  // out the passive regen; with it, "top up before committing to the climb"
+  // becomes a real decision made under a 32s clock.
+  //
+  // Set aside against the room's far side wall — its dead end, the one opposite
+  // the entrance (the user: "put the chargers on the first floor a bit aside",
+  // then "add the charging dock in the cinema room to the other side of the
+  // room"). Turned a quarter so the column backs into that wall and the pad
+  // faces back across the apron.
+  //
+  // It sat by the entrance wall for a pass, which made it something you walked
+  // past on the way in. Over here it's a genuine detour — the full width of the
+  // room from the door, and away from the aisle you climb — so topping up costs
+  // you the walk as well as the seconds standing on it, which is the decision
+  // the docks exist to create.
+  //
+  // Clear of everything around it: the room's walkable edge is x -66.8 and the
+  // column lands at -64.1, the stage's own footprint stops at x -62 and sits
+  // 6m south anyway, row 0's wall is 3.3m north, and the apron quote at
+  // (-48, -23) is right across the room.
+  addChargingDock(group, 'first', {
+    x: zone.x - 15,
+    y,
+    z: zone.z - roomHalfD + 8,
+    rotationY: Math.PI / 2,
+  });
+
   // Warm wash across the letters and the stage front, from just in front of
   // them. The scene's own ambient already makes them legible — this is for
   // the raked, spotlit look the reference frames have, not for legibility.
@@ -2400,6 +2587,7 @@ export function createFirstFloor(): THREE.Group {
   const room4 = ROOM4_ZONE;
   const y = FLOOR_HEIGHT;
   clearDevoxxLetters('first'); // see createExhibitionHall's own reset
+  clearChargingDocks('first');
   const hallWallHeight = 6; // end-caps only — CinematicHallway's own side walls use HALLWAY_CEILING_HEIGHT-derived scale
 
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x2e2b33 });
@@ -2499,8 +2687,31 @@ export function createFirstFloor(): THREE.Group {
   group.add(unusedCeiling);
   group.add(createLaserBarrier(hall.x, y, hallNearZ - MOVER_CLEARANCE, hall.halfW));
 
-  // No DEVOXX letters along this corridor: a set stood just outside the
-  // walkable edge here for one pass, and the user cut it when the prop gained
+  // Two charging docks along the corridor, both set well aside in the furniture
+  // strips rather than out in the walking lane (the user: "a bit aside"). The
+  // whole hall is walkable — HALL_ZONE.halfW is 15, the full width including
+  // both strips, so the recessed limit is x -26.8..0.8, not just the 14m
+  // centre — but the strips are where the tables, chairs and pillars already
+  // live, so that's where a fixture belongs. Each sits in the clear band
+  // between the corridor's own visual edge (x = ±7 local) and the chairs and
+  // pillars at ±10.2, and each lands between furniture slots in z rather than
+  // beside one: the slots run every 6m, which puts them on world z ≡ -49 (mod
+  // 6). Nearest neighbour to either dock is ~2.5m.
+  //
+  // The midpoint one also sits deliberately *off* ROOM_WAYPOINTS' own hall
+  // point at (FIRST_FLOOR_CENTER_X, -46), which wandering hazards steer
+  // straight at. Making the refuel a contested tile would be a defensible
+  // design, but it should be a decision rather than an accident of two features
+  // picking the same coordinate.
+  addChargingDock(group, 'first', { x: hall.x - 8.5, y, z: hall.z + 3, rotationY: 0 });
+  // The far one serves the deep end, between the quotes at z=-85 and z=-115 —
+  // the longest stretch of the level with nothing on it, and the furthest point
+  // from anywhere else to recover. Opposite strip from the midpoint dock, so
+  // the two don't read as a repeated fixture down one side.
+  addChargingDock(group, 'first', { x: hall.x + 8.5, y, z: -100, rotationY: 0 });
+
+  // No DEVOXX letters along this corridor: a set stood in the left furniture
+  // strip here for one pass, and the user cut it when the prop gained
   // its topple ("would remove the devoxx letters in the hall on the first
   // floor"). The two that remain are the ones you can actually walk up to and
   // knock over — Room 4's podium and the foyer above the entrance stair —
