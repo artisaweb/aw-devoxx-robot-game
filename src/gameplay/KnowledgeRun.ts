@@ -47,18 +47,17 @@ import { KNOWLEDGE_QUOTES, KnowledgeQuoteId } from '../text/knowledgeQuotes';
 // width for the hall) instead of sitting on one exact line, per his earlier
 // "spread across the map, not one line" ask.
 const QUOTE_DEFS: { pos: [number, number]; quoteId: KnowledgeQuoteId }[] = [
-  { pos: [-16, 30], quoteId: 'stream-usb' }, // hall, near Stairs A/B end
+  { pos: [-16, 30], quoteId: 'stream-single-use' }, // hall, near Stairs A/B end
   { pos: [-10, 5], quoteId: 'debugging-detective' }, // hall
-  { pos: [-13, -25], quoteId: 'java-optional-cat' }, // hall
-  { pos: [-16, -55], quoteId: 'null-personal-problem' }, // hall, mid-length
-  { pos: [-10, -85], quoteId: 'ci-proof-broken' }, // hall
-  { pos: [-13, -115], quoteId: 'two-hard-things' }, // hall, near Stair C end
-  { pos: [-48, -23], quoteId: 'kubernetes-complicated' }, // Room 4, flat apron near the screen — no jump needed
+  { pos: [-13, -25], quoteId: 'java-write-debug' }, // hall
+  { pos: [-10, -85], quoteId: 'ai-code-review' }, // hall
+  { pos: [-13, -115], quoteId: 'out-of-scope' }, // hall, near Stair C end
+  { pos: [-48, -23], quoteId: 'kubernetes-cluster' }, // Room 4, flat apron near the screen — no jump needed
   { pos: [-49.3, -16.55], quoteId: 'microservice-monolith' }, // Room 4, row 0 (1 jump deep)
   { pos: [-46.7, -11.97], quoteId: 'cloud-other-computer' }, // Room 4, row 2 (3 jumps deep)
-  { pos: [-46.7, -2.79], quoteId: 'agile-figure-it-out' }, // Room 4, row 6 (7 jumps deep)
-  { pos: [-49.3, 6.39], quoteId: 'demo-rehearsal' }, // Room 4, row 10 (11 jumps deep)
-  { pos: [-49.3, 15.56], quoteId: 'documentation-six-months' }, // Room 4, row 14 (15 jumps deep)
+  { pos: [-46.7, -2.79], quoteId: 'architecture-legacy' }, // Room 4, row 6 (7 jumps deep)
+  { pos: [-49.3, 6.39], quoteId: 'demo-worked-yesterday' }, // Room 4, row 10 (11 jumps deep)
+  { pos: [-49.3, 15.56], quoteId: 'ai-confident-wrong' }, // Room 4, row 14 (15 jumps deep)
   { pos: [-48, 17.4], quoteId: 'technical-debt-loan' }, // Room 4, row 15 — the back row, 16 jumps deep (pulled in slightly from the tier's own raw edge — MOVER_CLEARANCE recesses the walkable zone short of it)
 ];
 const PICKUP_RADIUS = 1.4;
