@@ -52,6 +52,8 @@ export interface CinematicHallwayOptions {
    * stairwells.
    */
   clearZones?: { z: number; halfZ: number }[];
+  /** Rectangles cut out of the floor, in local coords — for anything that drops through it, like a stairwell sunk into the hall (see ExhibitionHall's SIDE_STAIRS). Without a hole the floor simply covers the void and the steps sit under a lid. */
+  floorHoles?: { x: number; z: number; halfW: number; halfD: number }[];
   palette?: Partial<HallwayPalette>;
   /** Real THREE.PointLights are expensive at this scale — only every Nth pillar gets one; the rest still read as lit via the instanced mesh's own emissive material. 1 = every pillar, 0.5 = every other, etc. */
   lightDensity?: number;
@@ -200,7 +202,7 @@ export class CinematicHallway extends THREE.Group {
 
     const halfWidth = this.corridorHalfWidth + this.sideDepth;
 
-    this.buildFloorAndCeiling(halfWidth);
+    this.buildFloorAndCeiling(halfWidth, options.floorHoles ?? []);
     this.buildSideWalls(halfWidth, wallGaps);
     this.buildPillars(lightDensity);
     this.buildFurniture(halfWidth);
@@ -280,9 +282,12 @@ export class CinematicHallway extends THREE.Group {
     return positions;
   }
 
-  private buildFloorAndCeiling(halfWidth: number): void {
+  private buildFloorAndCeiling(
+    halfWidth: number,
+    floorHoles: { x: number; z: number; halfW: number; halfD: number }[],
+  ): void {
     const floorMat = new THREE.MeshStandardMaterial({ color: this.palette.floor, roughness: 0.9, metalness: 0.1 });
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(halfWidth * 2, this.halfLength * 2), floorMat);
+    const floor = new THREE.Mesh(this.buildFloorGeometry(halfWidth, floorHoles), floorMat);
     floor.rotation.x = -Math.PI / 2;
     this.add(floor);
 
@@ -293,6 +298,39 @@ export class CinematicHallway extends THREE.Group {
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.y = this.ceilingHeight;
     this.add(ceiling);
+  }
+
+  /**
+   * The floor, as one rectangle or — where the caller asked for holes — a shape
+   * with those rectangles punched out.
+   *
+   * Watch the axis: the mesh is authored in the XY plane and laid flat by
+   * rotating -90 deg about X, which maps the shape's own +y to world -z. A hole
+   * meant for local z therefore has to be built at -z, or it lands mirrored at
+   * the far end of the hall from wherever the caller meant.
+   */
+  private buildFloorGeometry(
+    halfWidth: number,
+    holes: { x: number; z: number; halfW: number; halfD: number }[],
+  ): THREE.BufferGeometry {
+    if (!holes.length) return new THREE.PlaneGeometry(halfWidth * 2, this.halfLength * 2);
+    const shape = new THREE.Shape();
+    shape.moveTo(-halfWidth, -this.halfLength);
+    shape.lineTo(halfWidth, -this.halfLength);
+    shape.lineTo(halfWidth, this.halfLength);
+    shape.lineTo(-halfWidth, this.halfLength);
+    shape.closePath();
+    for (const hole of holes) {
+      const y = -hole.z; // see this method's own comment
+      const path = new THREE.Path();
+      path.moveTo(hole.x - hole.halfW, y - hole.halfD);
+      path.lineTo(hole.x + hole.halfW, y - hole.halfD);
+      path.lineTo(hole.x + hole.halfW, y + hole.halfD);
+      path.lineTo(hole.x - hole.halfW, y + hole.halfD);
+      path.closePath();
+      shape.holes.push(path);
+    }
+    return new THREE.ShapeGeometry(shape);
   }
 
   private buildSideWalls(halfWidth: number, wallGaps: HallwayDoorGap[]): void {

@@ -330,55 +330,69 @@ const HALL_STAIR_BRIDGE: RaisedZone = {
 // nothing stops the player walking up to a visible opening, so it has to hold
 // up underfoot rather than only from a distance.
 //
-// z = -39 threads the corridor's existing occupants: it's clear of Room 4's
-// whole frontage (z -29..19, the one stretch of left wall that's already an
-// opening) and sits midway between the door-front props at z -24 and -54.
-const SIDE_STAIR_Z = -39;
+// Orientation, rebuilt 2026-09-29. These first ran *across* the corridor —
+// each flight punched through a side wall and descended outward along x, into
+// space outside the building's own footprint. The user: "the stair at the left
+// side and right side is correct in dimensions, but the orientation is not
+// correct, they should rotate 90 degrees and are going down within the hall,
+// make sure we don't fall into it, but where they are located now is just
+// wrong." So the dimensions below are untouched and only the axis and position
+// changed: each run now descends along z, parallel to the corridor, sunk into
+// the hall's own floor against a side wall — which is also how the first-floor
+// plan draws them, as runs beside the corridor between the room blocks rather
+// than as openings in its walls.
+//
+// That swap is what makes the railing below load-bearing rather than dressing.
+// Outside the building the old wells were guarded for free, because the hall's
+// own zone simply didn't reach them. Sunk into the hall floor there is no such
+// boundary to lean on: HALL_ZONE covers the well's whole footprint, so
+// isOnFirstFloor is true standing over it and getFirstFloorHeightAt hands back
+// the step height wherever you are. Nothing but a real collider keeps a robot
+// out of a 3m hole — see getSideStairRailingColliders.
 const SIDE_STAIR_HALF_WIDTH = 3; // 6m wide opening — a venue staircase, not a room-wide gap
-// Where each run starts: the hallway's own side walls, which stand at the
-// full hall half-width (corridor + furniture strip), not at the corridor's
-// clear edge.
-const SIDE_STAIR_TOP_X_LEFT = HALL_ZONE.x - HALLWAY_HALF_WIDTH;
-const SIDE_STAIR_TOP_X_RIGHT = HALL_ZONE.x + HALLWAY_HALF_WIDTH;
 // Same rise/tread/step count/pit as Stair C — these read as the same
 // building's stairs because they are built from the same numbers.
-const SIDE_STAIR_ZONE_HALF_W = (STAIR_RUN_DEPTH + STAIR_PIT_DEPTH) / 2;
+const SIDE_STAIR_RUN_LENGTH = STAIR_RUN_DEPTH + STAIR_PIT_DEPTH;
+const SIDE_STAIR_ZONE_HALF_D = SIDE_STAIR_RUN_LENGTH / 2;
+// Each well hugs a side wall, so its outer edge lands on the wall plane and its
+// 6m width eats into the furniture strip rather than the walking corridor.
+const SIDE_STAIR_CENTER_X_LEFT = HALL_ZONE.x - HALLWAY_HALF_WIDTH + SIDE_STAIR_HALF_WIDTH;
+const SIDE_STAIR_CENTER_X_RIGHT = HALL_ZONE.x + HALLWAY_HALF_WIDTH - SIDE_STAIR_HALF_WIDTH;
+// Solved rather than picked, because the left wall is the binding constraint and
+// the fit is tight. Room 4's frontage is a real opening in that wall from
+// z -29 all the way to z 19, and the next door-front prop south of it sits at
+// z -54 with a 5.5m signage panel (so its edge is z -51.25). That leaves 22.25m
+// of usable wall against a 20.4m run: the flight starts MOVER_CLEARANCE clear of
+// Room 4's edge and descends away from it, which puts its far end at -50.6, just
+// clear of that panel. The right wall has no room frontage and is 24.5m clear
+// between the same two door slots, so the pair still sits at one z.
+const SIDE_STAIR_TOP_Z = -29 - MOVER_CLEARANCE;
 
 /**
- * One mid-corridor staircase. `topX` is the corridor wall plane the run
- * starts at and `dirX` which way it descends, which is all sideStairHeightAt
- * needs to reuse Stair C's own per-step formula on the x axis instead of z.
+ * One mid-corridor staircase. `topZ` is where the first step drops below the
+ * hall floor and `dirZ` which way it descends, which is all sideStairHeightAt
+ * needs to reuse Stair C's own per-step formula.
  */
 interface SideStair {
   zone: RaisedZone;
-  topX: number;
-  dirX: -1 | 1;
+  topZ: number;
+  dirZ: -1 | 1;
 }
 
-const SIDE_STAIRS: SideStair[] = [
-  {
-    zone: {
-      x: SIDE_STAIR_TOP_X_LEFT - SIDE_STAIR_ZONE_HALF_W,
-      z: SIDE_STAIR_Z,
-      halfW: SIDE_STAIR_ZONE_HALF_W,
-      halfD: SIDE_STAIR_HALF_WIDTH,
-      height: FLOOR_HEIGHT - NUM_STAIRS * STAIR_RISE,
-    },
-    topX: SIDE_STAIR_TOP_X_LEFT,
-    dirX: -1,
+/** Both wells descend the same way — away from Room 4 and from the end of the corridor the robot arrives at, so the open top is the end you reach first. */
+const SIDE_STAIR_DIR_Z = -1;
+
+const SIDE_STAIRS: SideStair[] = [SIDE_STAIR_CENTER_X_LEFT, SIDE_STAIR_CENTER_X_RIGHT].map((centerX) => ({
+  zone: {
+    x: centerX,
+    z: SIDE_STAIR_TOP_Z + SIDE_STAIR_DIR_Z * SIDE_STAIR_ZONE_HALF_D,
+    halfW: SIDE_STAIR_HALF_WIDTH,
+    halfD: SIDE_STAIR_ZONE_HALF_D,
+    height: FLOOR_HEIGHT - NUM_STAIRS * STAIR_RISE,
   },
-  {
-    zone: {
-      x: SIDE_STAIR_TOP_X_RIGHT + SIDE_STAIR_ZONE_HALF_W,
-      z: SIDE_STAIR_Z,
-      halfW: SIDE_STAIR_ZONE_HALF_W,
-      halfD: SIDE_STAIR_HALF_WIDTH,
-      height: FLOOR_HEIGHT - NUM_STAIRS * STAIR_RISE,
-    },
-    topX: SIDE_STAIR_TOP_X_RIGHT,
-    dirX: 1,
-  },
-];
+  topZ: SIDE_STAIR_TOP_Z,
+  dirZ: SIDE_STAIR_DIR_Z,
+}));
 
 /**
  * True anywhere inside either mid-corridor stairwell (see SIDE_STAIRS).
@@ -397,12 +411,12 @@ export function isInSideStairwell(x: number, z: number): boolean {
   );
 }
 
-/** stairHeightAt's formula on the x axis — see SideStair. Returns undefined anywhere outside both runs, so callers fall through to the normal zone height. */
+/** stairHeightAt's own formula — see SideStair. Returns undefined anywhere outside both runs, so callers fall through to the normal zone height. */
 function sideStairHeightAt(x: number, z: number): number | undefined {
   for (const stair of SIDE_STAIRS) {
     const { zone } = stair;
     if (Math.abs(x - zone.x) > zone.halfW || Math.abs(z - zone.z) > zone.halfD) continue;
-    const distIntoStairs = (x - stair.topX) * stair.dirX; // 0 at the top (corridor side), growing toward the landing
+    const distIntoStairs = (z - stair.topZ) * stair.dirZ; // 0 at the top (hall floor), growing toward the landing
     if (distIntoStairs >= STAIR_RUN_DEPTH) return zone.height;
     const step = Math.floor(distIntoStairs / STAIR_TREAD_DEPTH);
     return FLOOR_HEIGHT - (step + 1) * STAIR_RISE;
@@ -410,17 +424,42 @@ function sideStairHeightAt(x: number, z: number): number | undefined {
   return undefined;
 }
 
-// Same job as HALL_STAIR_BRIDGE, with halfW/halfD swapped because these
-// openings are in a side wall: a thin strip spanning the gap that the hall's
-// own 'left'/'right' recess and the stair zone's unrecessed corridor edge
-// leave between them.
-const SIDE_STAIR_BRIDGES: RaisedZone[] = SIDE_STAIRS.map((stair) => ({
-  x: stair.topX + (stair.dirX * MOVER_CLEARANCE) / -2, // midpoint of the MOVER_CLEARANCE-wide gap, on the corridor side of the wall
-  z: SIDE_STAIR_Z,
-  halfW: MOVER_CLEARANCE / 2 + 0.1,
-  halfD: SIDE_STAIR_HALF_WIDTH,
-  height: FLOOR_HEIGHT,
-}));
+/**
+ * The balustrade that keeps a robot from walking off the hall floor into a
+ * well: down the corridor-facing long edge of each one and across its far end,
+ * leaving only the top of the flight open. This is the entire fall guard (see
+ * SIDE_STAIRS' own note on why zone membership can't do it any more).
+ *
+ * Circles along a line, like getStairEnclosureColliders — but spaced off
+ * ROW_WALL_MIN_REACH's own lesson rather than by eye. A run of circles blocks
+ * at `reach` only directly in front of one; exactly between two it blocks at
+ * sqrt(reach² − (spacing/2)²), and it's that worst case that has to hold,
+ * because the failure it allows here isn't clipping a wall — it's slipping
+ * between two posts into a 3m drop.
+ */
+const SIDE_STAIR_RAIL_RADIUS = 0.5;
+const SIDE_STAIR_RAIL_SPACING = (SIDE_STAIR_RAIL_RADIUS + MOVER_CLEARANCE) * 0.5;
+export function getSideStairRailingColliders(): Collider[] {
+  const colliders: Collider[] = [];
+  const line = (x1: number, z1: number, x2: number, z2: number) => {
+    const length = Math.hypot(x2 - x1, z2 - z1);
+    const count = Math.max(2, Math.ceil(length / SIDE_STAIR_RAIL_SPACING) + 1);
+    for (let i = 0; i < count; i++) {
+      const t = i / (count - 1);
+      colliders.push({ x: x1 + (x2 - x1) * t, z: z1 + (z2 - z1) * t, radius: SIDE_STAIR_RAIL_RADIUS });
+    }
+  };
+  for (const { zone } of SIDE_STAIRS) {
+    // The corridor-facing edge is whichever of the well's long sides faces the
+    // hall's centreline; the other one is the building's own side wall.
+    const railX = zone.x + Math.sign(HALL_ZONE.x - zone.x) * SIDE_STAIR_HALF_WIDTH;
+    const topZ = zone.z - SIDE_STAIR_DIR_Z * SIDE_STAIR_ZONE_HALF_D;
+    const farZ = zone.z + SIDE_STAIR_DIR_Z * SIDE_STAIR_ZONE_HALF_D;
+    line(railX, topZ, railX, farZ);
+    line(railX, farZ, zone.x - Math.sign(HALL_ZONE.x - zone.x) * SIDE_STAIR_HALF_WIDTH, farZ);
+  }
+  return colliders;
+}
 
 // Half-width of the gap between the hall and an auditorium, in the wall they
 // share — the visual wall-gap in createFirstFloor() and the walkable
@@ -753,16 +792,14 @@ export const FIRST_FLOOR_ZONES: RaisedZone[] = [
   // connection back up to the hall, bridged by HALL_STAIR_BRIDGE below.
   recessedZone(STAIR_ZONE, 'left', 'right', 'far'),
   HALL_STAIR_BRIDGE,
-  // The mid-corridor pair (see SIDE_STAIRS). Each is walled on both z sides
-  // ('near'/'far', the flight's own side walls) and at the bottom of its run
-  // — which is the 'left' side for the one descending toward -x and the
-  // 'right' side for its mirror, since that's where the closed door stands.
-  // The corridor-facing side stays unrecessed: that's the opening, bridged by
-  // SIDE_STAIR_BRIDGES.
-  ...SIDE_STAIRS.map((stair) =>
-    recessedZone(stair.zone, 'near', 'far', stair.dirX === -1 ? 'left' : 'right'),
-  ),
-  ...SIDE_STAIR_BRIDGES,
+  // The mid-corridor pair (see SIDE_STAIRS) needs no entry of its own any
+  // more, and no bridge either. Both existed because the wells used to sit
+  // outside the hall, past its wall, so they had to add their own walkable
+  // footprint and then stitch it to the hall across the wall's clearance gap.
+  // Sunk into the hall's floor they are simply part of it: HALL_ZONE already
+  // covers them, its own wall recess already keeps a mover off the side wall
+  // the well backs onto, and what stops anyone entering other than down the
+  // steps is the railing, not a zone edge.
 ];
 
 // Bounds for Robot.ts's tryMove/FollowCamera's camera clamp/Hud's minimap —
@@ -1930,82 +1967,107 @@ function createGlassDoorTexture(): THREE.CanvasTexture {
 // own two-stair layout, same as Room 4's screen/stage — CinematicHallway
 // stays a generic, game-agnostic hallway shell.
 /**
- * One mid-corridor staircase down (see SIDE_STAIRS): a flight through the
- * hallway's side wall, a small landing, and a closed double door at the
- * bottom standing in for the ground-floor room behind it.
+ * One mid-corridor staircase down (see SIDE_STAIRS): a flight sunk into the
+ * hall's own floor alongside a side wall, a small landing, and a closed double
+ * door at the bottom standing in for the ground-floor room behind it.
  *
- * Built along x rather than z, so every step's top face is placed from the
- * same `FLOOR_HEIGHT - (i + 1) * STAIR_RISE` that sideStairHeightAt returns
- * for that band — the visual geometry and the walkable height function come
- * from one formula, the same rule every tiered zone in this file follows.
+ * Built along z, so every step's top face is placed from the same
+ * `FLOOR_HEIGHT - (i + 1) * STAIR_RISE` that sideStairHeightAt returns for that
+ * band — the visual geometry and the walkable height function come from one
+ * formula, the same rule every tiered zone in this file follows.
+ *
+ * Note what this does *not* build any more, now that the well is inside the
+ * hall rather than beyond its wall: no full-height walls framing the flight
+ * (they'd stand in the middle of the corridor), and no ceiling over it (it
+ * opens to the hall's own). What replaces them is a waist-high balustrade
+ * along the two open edges, matched exactly by getSideStairRailingColliders.
  */
 function buildSideStair(group: THREE.Group, stair: SideStair): void {
-  const { zone, topX, dirX } = stair;
+  const { zone, topZ, dirZ } = stair;
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1f1d24, roughness: 1 });
   const stepMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x2a2730, roughness: 0.6, metalness: 0.5 });
 
-  // Sized from the lowest point these have to cover (the landing) up to the
-  // corridor's own ceiling, same as Stair C's walls.
-  const wallBaseY = zone.height;
-  const wallTopY = FLOOR_HEIGHT + HALLWAY_CEILING_HEIGHT;
-  const wallHeight = wallTopY - wallBaseY;
-  const wallCenterY = (wallTopY + wallBaseY) / 2;
-  const runLength = STAIR_RUN_DEPTH + STAIR_PIT_DEPTH;
-  const runCenterX = topX + dirX * (runLength / 2);
+  const runCenterZ = topZ + dirZ * (SIDE_STAIR_RUN_LENGTH / 2);
+  const farZ = topZ + dirZ * SIDE_STAIR_RUN_LENGTH;
+  const inward = Math.sign(HALL_ZONE.x - zone.x); // toward the corridor's centreline
+  const railX = zone.x + inward * SIDE_STAIR_HALF_WIDTH;
 
-  // Side walls framing the flight, one on each z edge.
-  for (const sideZ of [zone.z - SIDE_STAIR_HALF_WIDTH, zone.z + SIDE_STAIR_HALF_WIDTH]) {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(runLength, wallHeight, 0.5), wallMat);
-    wall.position.set(runCenterX, wallCenterY, sideZ);
-    group.add(wall);
-  }
-
-  // Ceiling over the flight — without it the stairwell opens straight into
-  // the void above, which reads as a hole punched in the building.
-  const ceiling = new THREE.Mesh(
-    new THREE.PlaneGeometry(runLength, SIDE_STAIR_HALF_WIDTH * 2),
-    new THREE.MeshBasicMaterial({ color: 0x010101 }),
-  );
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.set(runCenterX, FLOOR_HEIGHT + HALLWAY_CEILING_HEIGHT, zone.z);
-  group.add(ceiling);
-
-  const stepGeo = new THREE.BoxGeometry(STAIR_TREAD_DEPTH, STAIR_RISE, SIDE_STAIR_HALF_WIDTH * 2);
+  const stepGeo = new THREE.BoxGeometry(SIDE_STAIR_HALF_WIDTH * 2, STAIR_RISE, STAIR_TREAD_DEPTH);
   for (let i = 0; i < NUM_STAIRS; i++) {
     const treadTopY = FLOOR_HEIGHT - (i + 1) * STAIR_RISE;
     const step = new THREE.Mesh(stepGeo, stepMat);
     step.position.set(
-      topX + dirX * (i * STAIR_TREAD_DEPTH + STAIR_TREAD_DEPTH / 2),
+      zone.x,
       treadTopY - STAIR_RISE / 2,
-      zone.z,
+      topZ + dirZ * (i * STAIR_TREAD_DEPTH + STAIR_TREAD_DEPTH / 2),
     );
     group.add(step);
   }
 
   // The landing beyond the last step.
-  const landing = new THREE.Mesh(new THREE.PlaneGeometry(STAIR_PIT_DEPTH, SIDE_STAIR_HALF_WIDTH * 2), stepMat);
+  const landing = new THREE.Mesh(new THREE.PlaneGeometry(SIDE_STAIR_HALF_WIDTH * 2, STAIR_PIT_DEPTH), stepMat);
   landing.rotation.x = -Math.PI / 2;
-  landing.position.set(topX + dirX * (STAIR_RUN_DEPTH + STAIR_PIT_DEPTH / 2), zone.height, zone.z);
+  landing.position.set(zone.x, zone.height, topZ + dirZ * (STAIR_RUN_DEPTH + STAIR_PIT_DEPTH / 2));
   group.add(landing);
 
   // Dead end: a solid wall with the same closed double door the building's
   // other stairwells use, which is what "ends in the closed rooms on the
   // ground floor" looks like from this side. No teleport — see SIDE_STAIRS.
-  const endX = topX + dirX * runLength;
-  const endWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, wallHeight, SIDE_STAIR_HALF_WIDTH * 2), wallMat);
-  endWall.position.set(endX, wallCenterY, zone.z);
+  const wallBaseY = zone.height;
+  const wallTopY = FLOOR_HEIGHT;
+  const endWall = new THREE.Mesh(
+    new THREE.BoxGeometry(SIDE_STAIR_HALF_WIDTH * 2, wallTopY - wallBaseY, 0.5),
+    wallMat,
+  );
+  endWall.position.set(zone.x, (wallTopY + wallBaseY) / 2, farZ);
   group.add(endWall);
-  // createStairDoorMesh builds facing +z around the coordinates it's given,
-  // so it's built at the origin and then turned to face back up the flight.
+
+  // The trench's own two long sides, below floor level only. The hall's floor
+  // now has a hole in it here and its side walls start at floor level, so
+  // without these the cut edge looks straight out into nothing from down in the
+  // well — a flight of steps floating in a black slot rather than a stairwell
+  // with sides.
+  for (const sideX of [zone.x - SIDE_STAIR_HALF_WIDTH, zone.x + SIDE_STAIR_HALF_WIDTH]) {
+    const sideWall = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, wallTopY - wallBaseY, SIDE_STAIR_RUN_LENGTH),
+      wallMat,
+    );
+    sideWall.position.set(sideX, (wallTopY + wallBaseY) / 2, runCenterZ);
+    group.add(sideWall);
+  }
+  // createStairDoorMesh builds facing +z, which is back up the flight when the
+  // run descends toward -z — so the one that descends the other way is turned.
   const door = createStairDoorMesh(0, 0, 0);
-  door.position.set(endX - dirX * 0.3, zone.height, zone.z);
-  door.rotation.y = dirX === -1 ? Math.PI / 2 : -Math.PI / 2;
+  door.position.set(zone.x, zone.height, farZ - dirZ * 0.3);
+  if (dirZ === 1) door.rotation.y = Math.PI;
   group.add(door);
 
+  // The balustrade: the whole reason a robot can walk past one of these
+  // without ending up at the bottom of it. Waist-high would look right and be
+  // wrong — the robot clears ~1.36m in a jump, so anything shorter than that
+  // is either something it can hop over into the well or, worse, a rail with
+  // an invisible wall stacked above it. RAIL_HEIGHT sits just above the jump,
+  // so what's drawn and what blocks are the same thing.
+  const RAIL_HEIGHT = 1.5;
+  const railY = FLOOR_HEIGHT + RAIL_HEIGHT / 2;
+  const longRail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, RAIL_HEIGHT, SIDE_STAIR_RUN_LENGTH),
+    railMat,
+  );
+  longRail.position.set(railX, railY, runCenterZ);
+  group.add(longRail);
+  const endRail = new THREE.Mesh(
+    new THREE.BoxGeometry(SIDE_STAIR_HALF_WIDTH * 2, RAIL_HEIGHT, 0.2),
+    railMat,
+  );
+  endRail.position.set(zone.x, railY, farZ);
+  group.add(endRail);
+
   // Lights down the run and over the landing. Not optional dressing: the
-  // corridor's own lighting stops at its wall, so without these the opening
-  // reads as a black hole rather than as somewhere you can go, and the steps
-  // themselves are invisible to judge distance against.
+  // corridor's own lighting doesn't reach into a sunken well, so without these
+  // the opening reads as a black hole rather than as somewhere you can go, and
+  // the steps themselves are invisible to judge distance against.
   const lightPlan: [number, number][] = [
     [3, FLOOR_HEIGHT - 0.5], // just inside the opening
     [9, FLOOR_HEIGHT - 2], // mid-flight, following the descent down
@@ -2013,7 +2075,7 @@ function buildSideStair(group: THREE.Group, stair: SideStair): void {
   ];
   for (const [alongRun, lightY] of lightPlan) {
     const light = new THREE.PointLight(0xdfe6ff, 2.5, 16, 1.4);
-    light.position.set(topX + dirX * alongRun, lightY, zone.z);
+    light.position.set(zone.x, lightY, topZ + dirZ * alongRun);
     group.add(light);
   }
 }
@@ -2575,27 +2637,37 @@ export function createFirstFloor(): THREE.Group {
     ceilingHeight: HALLWAY_CEILING_HEIGHT,
     doorsPerSide: HALLWAY_DOOR_Z_POSITIONS.length,
     doorZPositions: HALLWAY_DOOR_Z_POSITIONS,
-    // Room 4's whole frontage, plus a real opening in each side wall for the
-    // mid-corridor stairs (see SIDE_STAIRS) — without these the two flights
-    // would be built behind solid wall and be unreachable, while still
-    // looking correct from anywhere inside the corridor. z is hall-relative
-    // here, unlike SIDE_STAIR_Z's world value.
-    wallGaps: [
-      { side: 'left', z: ROOM4_ZONE.z - hall.z, halfGap: ROOM4_ZONE.halfD },
-      { side: 'left', z: SIDE_STAIR_Z - hall.z, halfGap: SIDE_STAIR_HALF_WIDTH },
-      { side: 'right', z: SIDE_STAIR_Z - hall.z, halfGap: SIDE_STAIR_HALF_WIDTH },
-    ],
+    // Room 4's whole frontage, and nothing else. The mid-corridor stairs used
+    // to need an opening in each side wall too, back when they descended
+    // outward through it; now that they drop into the hall's own floor beside
+    // those walls (see SIDE_STAIRS), a gap there would just be a hole in the
+    // corridor. z is hall-relative here, unlike SIDE_STAIRS' world values.
+    wallGaps: [{ side: 'left', z: ROOM4_ZONE.z - hall.z, halfGap: ROOM4_ZONE.halfD }],
+    // Punch the two stairwells out of the floor. Sinking a flight into the hall
+    // isn't enough on its own — the hall's floor is one plane across its whole
+    // footprint, so without this it simply runs over the trench and the steps
+    // sit under a lid (the user, looking straight at one: "there is a floor in
+    // between that should be removed where the stair is").
+    floorHoles: SIDE_STAIRS.map(({ zone }) => ({
+      x: zone.x - hall.x,
+      z: zone.z - hall.z,
+      halfW: zone.halfW,
+      halfD: zone.halfD,
+    })),
     // Room 4's own door reads as a real open doorway, not a closed prop —
     // no leaf, posts as tall as Room 4's own wall so there's no open strip
     // left above a shorter frame (the user: "remove the door now, keep the
     // wall, higher then now... this should be open so we can walk through
     // it, mimicking an open door").
     openDoorSlots: [{ side: 'left', z: HALLWAY_DOOR_Z_POSITIONS[1], height: AUDITORIUM_WALL_HEIGHT }],
-    // Keep the approach to both stairwells free — a fabric pillar or a table
-    // planted in the side strip would otherwise stand square in front of the
-    // opening (the furniture row sits only 2.4m off the wall).
+    // Keep both stairwells clear — and now that each one is a 20.4m trench in
+    // the floor rather than a doorway in the wall, "clear" means its whole
+    // length, not just the approach. The furniture row sits 2.4m off the wall
+    // and the pillars 4.8m, both inside a well that reaches 6m in from it, so
+    // without this a table would hang in mid-air over the steps and its
+    // collider with it.
     clearZones: [
-      { z: SIDE_STAIR_Z - hall.z, halfZ: SIDE_STAIR_HALF_WIDTH },
+      { z: SIDE_STAIRS[0].zone.z - hall.z, halfZ: SIDE_STAIR_ZONE_HALF_D },
       // Room 4's doorway needs the same treatment: the pillar row's own
       // spacing landed one lit pillar 2m off the doorway's centre, square in
       // the walk-in line (the user: "remove the lamp in front of the cinema
