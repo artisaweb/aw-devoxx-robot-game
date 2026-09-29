@@ -25,7 +25,7 @@ export type KnowledgeQuoteId =
   | 'technical-debt-loan';
 
 export const KNOWLEDGE_QUOTES: Record<KnowledgeQuoteId, string> = {
-  'stream-single-use': 'A stream is single-use — like a really good excuse.',
+  'stream-single-use': 'A stream can only be consumed once. Ask for seconds and it throws a tantrum.',
   'undocumented-feature': "It's not a bug, it's an undocumented feature.",
   'kubernetes-cluster': 'Kubernetes: turning one problem into a cluster of them.',
   'microservice-monolith': 'A microservice is just a monolith, chopped into twelve smaller problems.',
