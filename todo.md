@@ -84,10 +84,10 @@ a time" rule was half the reason the outer tables were safe. The line still read
 it has visible gaps in it now while people are away at the buffet. If that looks wrong, the knob
 is `MAX_CONCURRENT_GRABBERS` in `LunchRush.ts`.
 
-**Hunger drain: 85s → 50s to starve from full**, late-run cap 40s → 25s, ramp 90s → 70s. Per
-sandwich restore is unchanged, so "about four sandwiches keeps me topped up" still holds. This is
-the one number most likely to need another pass — it's a feel thing, and I couldn't play-test it
-(see below).
+**Hunger drain roughly 1.5x faster**: base rate 85s → 50s, late-run cap 40s → 25s, ramp 90s → 70s.
+Because the drain ramps, what that actually means is a full bar emptying in **39s instead of 61s**
+— measured, see "What testing found" above. Per-sandwich restore is unchanged. This is the one
+number most likely to need another pass; it's a feel thing.
 
 **Biggy's teeter maxes at about 14° of roll** at full size, zero at normal size. Amplitude is
 `TEETER_MAX_AMPLITUDE` in `Robot.ts`. Guessed — see below.
