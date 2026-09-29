@@ -226,7 +226,12 @@ export class Game {
         if (Number.isFinite(x) && Number.isFinite(z)) {
           const headingDeg = Number(params.get('heading') ?? '0');
           const heading = Number.isFinite(headingDeg) ? (headingDeg * Math.PI) / 180 : 0;
-          const floor = this.level === 1 ? 'ground' : 'first';
+          // Level 2 is the only one upstairs — Level 3 is Biggy back on the
+          // ground floor, redressed for lunchtime (see advanceToLevel3). This
+          // used to read `level === 1 ? 'ground' : 'first'`, which dropped
+          // ?level=3&x=&z= onto the first floor instead: the robot landed at
+          // the corridor's own height (4.5) and floated above the lunch hall.
+          const floor = this.level === 2 ? 'first' : 'ground';
           const y = floor === 'first' ? getFirstFloorHeightAt(x, z) : getGroundFloorHeightAt(x, z);
           this.robot.setMap(floor, { x, y, z, heading });
         }
