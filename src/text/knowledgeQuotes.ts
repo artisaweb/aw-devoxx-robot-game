@@ -11,37 +11,30 @@
 // enforces both completeness (every id used) and correct pairing.
 
 export type KnowledgeQuoteId =
-  | 'stream-usb'
-  | 'null-personal-problem'
-  | 'two-hard-things'
-  | 'kubernetes-complicated'
+  | 'stream-single-use'
+  | 'out-of-scope'
+  | 'kubernetes-cluster'
   | 'microservice-monolith'
   | 'cloud-other-computer'
   | 'debugging-detective'
-  | 'agile-figure-it-out'
-  | 'java-optional-cat'
-  | 'demo-rehearsal'
-  | 'ci-proof-broken'
-  | 'documentation-six-months'
+  | 'architecture-legacy'
+  | 'java-write-debug'
+  | 'demo-worked-yesterday'
+  | 'ai-code-review'
+  | 'ai-confident-wrong'
   | 'technical-debt-loan';
 
 export const KNOWLEDGE_QUOTES: Record<KnowledgeQuoteId, string> = {
-  'stream-usb':
-    'A stream is like a suspicious USB stick you found in a parking lot: use it once, then throw it away.',
-  'null-personal-problem': 'Null is not a value. Null is a personal problem.',
-  'two-hard-things':
-    'There are only two hard things in computer science: cache invalidation, naming things, and off-by-one errors.',
-  'kubernetes-complicated': "Kubernetes: it's not that complicated, said no one, ever.",
-  'microservice-monolith': 'A microservice is a monolith that got expensive to deploy in twelve different ways.',
-  'cloud-other-computer': 'The cloud is just someone else\'s computer, having a worse day than yours.',
+  'stream-single-use': 'A stream is like a condom: do not reuse.',
+  'out-of-scope': "Programmers don't die. They just go out of scope.",
+  'kubernetes-cluster': 'Kubernetes: turning one problem into a cluster of them.',
+  'microservice-monolith': 'A microservice is just a monolith, chopped into twelve smaller problems.',
+  'cloud-other-computer': "The cloud is just someone else's computer.",
   'debugging-detective': "Debugging is being the detective in a crime movie where you're also the murderer.",
-  'agile-figure-it-out': "Agile is what we call 'we'll figure it out as we go' when it's in a slide deck.",
-  'java-optional-cat': "A Java Optional is Schrödinger's cat with a legal requirement to check before you touch it.",
-  'demo-rehearsal': 'A demo that works in rehearsal is a demo plotting against you.',
-  'ci-proof-broken':
-    "Continuous integration: proof that everyone's code was broken all along, just not at the same time.",
-  'documentation-six-months':
-    'The best time to write documentation was six months ago. The second best time is never, apparently.',
-  'technical-debt-loan':
-    'Technical debt is just a loan you take out from Future You, who never agreed to the interest rate.',
+  'architecture-legacy': "Every well-architected system eventually becomes someone else's legacy code.",
+  'java-write-debug': 'Java: write once, debug everywhere.',
+  'demo-worked-yesterday': 'The most dangerous words before a demo: "it worked yesterday."',
+  'ai-code-review': "AI didn't replace developers. It just gave them more code to review.",
+  'ai-confident-wrong': "LLMs are confident. That's not the same as correct.",
+  'technical-debt-loan': 'Technical debt is a loan you take out from Future You.',
 };
