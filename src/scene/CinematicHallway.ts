@@ -43,6 +43,15 @@ export interface CinematicHallwayOptions {
   wallGaps?: HallwayDoorGap[];
   /** Door slots that should read as a real, walked-through open doorway (tall posts, no leaf, no glow) instead of the default closed decorative door. */
   openDoorSlots?: HallwayOpenDoorSlot[];
+  /**
+   * Local z bands to leave free of pillars and furniture, on both sides —
+   * for an opening the player actually walks through, where a table or a
+   * fabric pillar planted in the strip would stand square in the way. Door
+   * slots already get this treatment automatically (DOOR_CLEARANCE_Z); this
+   * is for openings that aren't door slots, such as the mid-corridor
+   * stairwells.
+   */
+  clearZones?: { z: number; halfZ: number }[];
   palette?: Partial<HallwayPalette>;
   /** Real THREE.PointLights are expensive at this scale — only every Nth pillar gets one; the rest still read as lit via the instanced mesh's own emissive material. 1 = every pillar, 0.5 = every other, etc. */
   lightDensity?: number;
@@ -170,6 +179,7 @@ export class CinematicHallway extends THREE.Group {
   readonly doorZPositions: number[];
   private readonly palette: HallwayPalette;
   private readonly openDoorSlots: HallwayOpenDoorSlot[];
+  private readonly clearZones: { z: number; halfZ: number }[];
   /** Local x/z/uplight-color of every pillar that got a real light+fixture mesh — populated by buildPillars(), purely for the fixture's own emissive colour (visual only). */
   private litPillarFixtures: { x: number; z: number; color: number }[] = [];
   /** Local x/z of every pillar, lit or not — populated by buildPillars(), read by pillarColliderPositions(). Every pillar gets the same collider regardless of whether it also got a light+fixture. */
@@ -184,6 +194,7 @@ export class CinematicHallway extends THREE.Group {
     this.doorZPositions = options.doorZPositions;
     this.palette = { ...DEFAULT_PALETTE, ...options.palette };
     this.openDoorSlots = options.openDoorSlots ?? [];
+    this.clearZones = options.clearZones ?? [];
     const lightDensity = options.lightDensity ?? 0.5;
     const wallGaps = options.wallGaps ?? [];
 
@@ -208,9 +219,14 @@ export class CinematicHallway extends THREE.Group {
     const slots: number[] = [];
     for (let z = -this.halfLength + TABLE_SPACING; z <= this.halfLength - TABLE_SPACING; z += TABLE_SPACING) {
       const nearDoor = this.doorZPositions.some((dz) => Math.abs(z - dz) < DOOR_CLEARANCE_Z);
-      if (!nearDoor) slots.push(z);
+      if (!nearDoor && !this.isInClearZone(z, 0)) slots.push(z);
     }
     return slots;
+  }
+
+  /** Whether local z falls inside a caller-declared keep-clear band (see `clearZones`), allowing for the prop's own footprint. */
+  private isInClearZone(z: number, propHalfDepth: number): boolean {
+    return this.clearZones.some((c) => Math.abs(z - c.z) < c.halfZ + propHalfDepth);
   }
 
   /** Local x/z/radius/topHeight for every table and chair — real Colliders so the hallway's furniture actually blocks movement instead of being walk-through set dressing (the user: "the lamp and tables/chairs should be real objects, now we can just walk through"). ExhibitionHall.ts adds its own hall-center world offset, same as doorLocalPositions(). */
@@ -321,6 +337,12 @@ export class CinematicHallway extends THREE.Group {
     const positions: { x: number; z: number; colorIndex: number }[] = [];
     let colorIndex = 0;
     for (let z = -this.halfLength + PILLAR_SPACING / 2; z <= this.halfLength - PILLAR_SPACING / 2; z += PILLAR_SPACING) {
+      // A pillar is 2.5 wide at its top, so one merely *near* a keep-clear
+      // band still leans over it — hence its own half-width as the margin.
+      if (this.isInClearZone(z, 2.5)) {
+        colorIndex++;
+        continue;
+      }
       positions.push({ x: -pillarX, z, colorIndex });
       positions.push({ x: pillarX, z, colorIndex });
       colorIndex++;

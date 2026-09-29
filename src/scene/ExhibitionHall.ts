@@ -259,6 +259,99 @@ const HALL_STAIR_BRIDGE: RaisedZone = {
   height: FLOOR_HEIGHT,
 };
 
+// The mid-corridor pair of staircases down, one through each side wall — the
+// real first-floor plan (private/assets/reference/venue/.../plan-first-floor-
+// rooms-3-10.jpg) marks three ways down off this corridor: a left/right pair
+// level with rooms 4 and 9 ("◀ Ground floor ▶") and one at the far end. Only
+// the far-end one existed (Stair C, above); the user: "two stairs are missing
+// on level 2."
+//
+// Placeholders in the sense that matters for gameplay: they descend one real
+// flight and stop at a closed door, and there is deliberately no DOOR_LINKS
+// entry for either (the user: "these stairs end in the closed two rooms on
+// the ground floor (just placeholder, not real link between the two
+// floors)"). Note that's also true of Stair C, whose own DOOR_LINKS teleport
+// is dead code — so "no teleport" is the house pattern here, not an exception.
+//
+// Real walkable geometry all the same, for exactly the reason Stair C is:
+// nothing stops the player walking up to a visible opening, so it has to hold
+// up underfoot rather than only from a distance.
+//
+// z = -39 threads the corridor's existing occupants: it's clear of Room 4's
+// whole frontage (z -29..19, the one stretch of left wall that's already an
+// opening) and sits midway between the door-front props at z -24 and -54.
+const SIDE_STAIR_Z = -39;
+const SIDE_STAIR_HALF_WIDTH = 3; // 6m wide opening — a venue staircase, not a room-wide gap
+// Where each run starts: the hallway's own side walls, which stand at the
+// full hall half-width (corridor + furniture strip), not at the corridor's
+// clear edge.
+const SIDE_STAIR_TOP_X_LEFT = HALL_ZONE.x - HALLWAY_HALF_WIDTH;
+const SIDE_STAIR_TOP_X_RIGHT = HALL_ZONE.x + HALLWAY_HALF_WIDTH;
+// Same rise/tread/step count/pit as Stair C — these read as the same
+// building's stairs because they are built from the same numbers.
+const SIDE_STAIR_ZONE_HALF_W = (STAIR_RUN_DEPTH + STAIR_PIT_DEPTH) / 2;
+
+/**
+ * One mid-corridor staircase. `topX` is the corridor wall plane the run
+ * starts at and `dirX` which way it descends, which is all sideStairHeightAt
+ * needs to reuse Stair C's own per-step formula on the x axis instead of z.
+ */
+interface SideStair {
+  zone: RaisedZone;
+  topX: number;
+  dirX: -1 | 1;
+}
+
+const SIDE_STAIRS: SideStair[] = [
+  {
+    zone: {
+      x: SIDE_STAIR_TOP_X_LEFT - SIDE_STAIR_ZONE_HALF_W,
+      z: SIDE_STAIR_Z,
+      halfW: SIDE_STAIR_ZONE_HALF_W,
+      halfD: SIDE_STAIR_HALF_WIDTH,
+      height: FLOOR_HEIGHT - NUM_STAIRS * STAIR_RISE,
+    },
+    topX: SIDE_STAIR_TOP_X_LEFT,
+    dirX: -1,
+  },
+  {
+    zone: {
+      x: SIDE_STAIR_TOP_X_RIGHT + SIDE_STAIR_ZONE_HALF_W,
+      z: SIDE_STAIR_Z,
+      halfW: SIDE_STAIR_ZONE_HALF_W,
+      halfD: SIDE_STAIR_HALF_WIDTH,
+      height: FLOOR_HEIGHT - NUM_STAIRS * STAIR_RISE,
+    },
+    topX: SIDE_STAIR_TOP_X_RIGHT,
+    dirX: 1,
+  },
+];
+
+/** stairHeightAt's formula on the x axis — see SideStair. Returns undefined anywhere outside both runs, so callers fall through to the normal zone height. */
+function sideStairHeightAt(x: number, z: number): number | undefined {
+  for (const stair of SIDE_STAIRS) {
+    const { zone } = stair;
+    if (Math.abs(x - zone.x) > zone.halfW || Math.abs(z - zone.z) > zone.halfD) continue;
+    const distIntoStairs = (x - stair.topX) * stair.dirX; // 0 at the top (corridor side), growing toward the landing
+    if (distIntoStairs >= STAIR_RUN_DEPTH) return zone.height;
+    const step = Math.floor(distIntoStairs / STAIR_TREAD_DEPTH);
+    return FLOOR_HEIGHT - (step + 1) * STAIR_RISE;
+  }
+  return undefined;
+}
+
+// Same job as HALL_STAIR_BRIDGE, with halfW/halfD swapped because these
+// openings are in a side wall: a thin strip spanning the gap that the hall's
+// own 'left'/'right' recess and the stair zone's unrecessed corridor edge
+// leave between them.
+const SIDE_STAIR_BRIDGES: RaisedZone[] = SIDE_STAIRS.map((stair) => ({
+  x: stair.topX + (stair.dirX * MOVER_CLEARANCE) / -2, // midpoint of the MOVER_CLEARANCE-wide gap, on the corridor side of the wall
+  z: SIDE_STAIR_Z,
+  halfW: MOVER_CLEARANCE / 2 + 0.1,
+  halfD: SIDE_STAIR_HALF_WIDTH,
+  height: FLOOR_HEIGHT,
+}));
+
 // Half-width of the gap between the hall and an auditorium, in the wall they
 // share — the visual wall-gap in createFirstFloor() and the walkable
 // doorway zone below both derive from this.
@@ -590,6 +683,16 @@ export const FIRST_FLOOR_ZONES: RaisedZone[] = [
   // connection back up to the hall, bridged by HALL_STAIR_BRIDGE below.
   recessedZone(STAIR_ZONE, 'left', 'right', 'far'),
   HALL_STAIR_BRIDGE,
+  // The mid-corridor pair (see SIDE_STAIRS). Each is walled on both z sides
+  // ('near'/'far', the flight's own side walls) and at the bottom of its run
+  // — which is the 'left' side for the one descending toward -x and the
+  // 'right' side for its mirror, since that's where the closed door stands.
+  // The corridor-facing side stays unrecessed: that's the opening, bridged by
+  // SIDE_STAIR_BRIDGES.
+  ...SIDE_STAIRS.map((stair) =>
+    recessedZone(stair.zone, 'near', 'far', stair.dirX === -1 ? 'left' : 'right'),
+  ),
+  ...SIDE_STAIR_BRIDGES,
 ];
 
 // Bounds for Robot.ts's tryMove/FollowCamera's camera clamp/Hud's minimap —
@@ -920,6 +1023,8 @@ export function getFirstFloorHeightAt(x: number, z: number): number {
   }
   const stairHeight = stairHeightAt(x, z);
   if (stairHeight !== undefined) return stairHeight;
+  const sideStairHeight = sideStairHeightAt(x, z);
+  if (sideStairHeight !== undefined) return sideStairHeight;
   const propHeight = getHallwayPropSurfaceHeightAt(x, z);
   if (propHeight !== undefined) return propHeight;
   const zone = findFirstFloorZone(x, z);
@@ -1526,6 +1631,95 @@ function createGlassDoorTexture(): THREE.CanvasTexture {
 // here (not inside CinematicHallway.ts) since it's specific to this game's
 // own two-stair layout, same as Room 4's screen/stage — CinematicHallway
 // stays a generic, game-agnostic hallway shell.
+/**
+ * One mid-corridor staircase down (see SIDE_STAIRS): a flight through the
+ * hallway's side wall, a small landing, and a closed double door at the
+ * bottom standing in for the ground-floor room behind it.
+ *
+ * Built along x rather than z, so every step's top face is placed from the
+ * same `FLOOR_HEIGHT - (i + 1) * STAIR_RISE` that sideStairHeightAt returns
+ * for that band — the visual geometry and the walkable height function come
+ * from one formula, the same rule every tiered zone in this file follows.
+ */
+function buildSideStair(group: THREE.Group, stair: SideStair): void {
+  const { zone, topX, dirX } = stair;
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x1f1d24, roughness: 1 });
+  const stepMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
+
+  // Sized from the lowest point these have to cover (the landing) up to the
+  // corridor's own ceiling, same as Stair C's walls.
+  const wallBaseY = zone.height;
+  const wallTopY = FLOOR_HEIGHT + HALLWAY_CEILING_HEIGHT;
+  const wallHeight = wallTopY - wallBaseY;
+  const wallCenterY = (wallTopY + wallBaseY) / 2;
+  const runLength = STAIR_RUN_DEPTH + STAIR_PIT_DEPTH;
+  const runCenterX = topX + dirX * (runLength / 2);
+
+  // Side walls framing the flight, one on each z edge.
+  for (const sideZ of [zone.z - SIDE_STAIR_HALF_WIDTH, zone.z + SIDE_STAIR_HALF_WIDTH]) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(runLength, wallHeight, 0.5), wallMat);
+    wall.position.set(runCenterX, wallCenterY, sideZ);
+    group.add(wall);
+  }
+
+  // Ceiling over the flight — without it the stairwell opens straight into
+  // the void above, which reads as a hole punched in the building.
+  const ceiling = new THREE.Mesh(
+    new THREE.PlaneGeometry(runLength, SIDE_STAIR_HALF_WIDTH * 2),
+    new THREE.MeshBasicMaterial({ color: 0x010101 }),
+  );
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.set(runCenterX, FLOOR_HEIGHT + HALLWAY_CEILING_HEIGHT, zone.z);
+  group.add(ceiling);
+
+  const stepGeo = new THREE.BoxGeometry(STAIR_TREAD_DEPTH, STAIR_RISE, SIDE_STAIR_HALF_WIDTH * 2);
+  for (let i = 0; i < NUM_STAIRS; i++) {
+    const treadTopY = FLOOR_HEIGHT - (i + 1) * STAIR_RISE;
+    const step = new THREE.Mesh(stepGeo, stepMat);
+    step.position.set(
+      topX + dirX * (i * STAIR_TREAD_DEPTH + STAIR_TREAD_DEPTH / 2),
+      treadTopY - STAIR_RISE / 2,
+      zone.z,
+    );
+    group.add(step);
+  }
+
+  // The landing beyond the last step.
+  const landing = new THREE.Mesh(new THREE.PlaneGeometry(STAIR_PIT_DEPTH, SIDE_STAIR_HALF_WIDTH * 2), stepMat);
+  landing.rotation.x = -Math.PI / 2;
+  landing.position.set(topX + dirX * (STAIR_RUN_DEPTH + STAIR_PIT_DEPTH / 2), zone.height, zone.z);
+  group.add(landing);
+
+  // Dead end: a solid wall with the same closed double door the building's
+  // other stairwells use, which is what "ends in the closed rooms on the
+  // ground floor" looks like from this side. No teleport — see SIDE_STAIRS.
+  const endX = topX + dirX * runLength;
+  const endWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, wallHeight, SIDE_STAIR_HALF_WIDTH * 2), wallMat);
+  endWall.position.set(endX, wallCenterY, zone.z);
+  group.add(endWall);
+  // createStairDoorMesh builds facing +z around the coordinates it's given,
+  // so it's built at the origin and then turned to face back up the flight.
+  const door = createStairDoorMesh(0, 0, 0);
+  door.position.set(endX - dirX * 0.3, zone.height, zone.z);
+  door.rotation.y = dirX === -1 ? Math.PI / 2 : -Math.PI / 2;
+  group.add(door);
+
+  // Lights down the run and over the landing. Not optional dressing: the
+  // corridor's own lighting stops at its wall, so without these the opening
+  // reads as a black hole rather than as somewhere you can go, and the steps
+  // themselves are invisible to judge distance against.
+  const lightPlan: [number, number][] = [
+    [3, FLOOR_HEIGHT - 0.5], // just inside the opening
+    [9, FLOOR_HEIGHT - 2], // mid-flight, following the descent down
+    [STAIR_RUN_DEPTH + 1, zone.height + 3], // over the landing and its door
+  ];
+  for (const [alongRun, lightY] of lightPlan) {
+    const light = new THREE.PointLight(0xdfe6ff, 2.5, 16, 1.4);
+    light.position.set(topX + dirX * alongRun, lightY, zone.z);
+    group.add(light);
+  }
+}
+
 function buildStairsAndScreen(group: THREE.Group, y: number): void {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1f1d24, roughness: 1 });
   const stepMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
@@ -2058,13 +2252,26 @@ export function createFirstFloor(): THREE.Group {
     ceilingHeight: HALLWAY_CEILING_HEIGHT,
     doorsPerSide: HALLWAY_DOOR_Z_POSITIONS.length,
     doorZPositions: HALLWAY_DOOR_Z_POSITIONS,
-    wallGaps: [{ side: 'left', z: ROOM4_ZONE.z - hall.z, halfGap: ROOM4_ZONE.halfD }],
+    // Room 4's whole frontage, plus a real opening in each side wall for the
+    // mid-corridor stairs (see SIDE_STAIRS) — without these the two flights
+    // would be built behind solid wall and be unreachable, while still
+    // looking correct from anywhere inside the corridor. z is hall-relative
+    // here, unlike SIDE_STAIR_Z's world value.
+    wallGaps: [
+      { side: 'left', z: ROOM4_ZONE.z - hall.z, halfGap: ROOM4_ZONE.halfD },
+      { side: 'left', z: SIDE_STAIR_Z - hall.z, halfGap: SIDE_STAIR_HALF_WIDTH },
+      { side: 'right', z: SIDE_STAIR_Z - hall.z, halfGap: SIDE_STAIR_HALF_WIDTH },
+    ],
     // Room 4's own door reads as a real open doorway, not a closed prop —
     // no leaf, posts as tall as Room 4's own wall so there's no open strip
     // left above a shorter frame (the user: "remove the door now, keep the
     // wall, higher then now... this should be open so we can walk through
     // it, mimicking an open door").
     openDoorSlots: [{ side: 'left', z: HALLWAY_DOOR_Z_POSITIONS[1], height: AUDITORIUM_WALL_HEIGHT }],
+    // Keep the approach to both stairwells free — a fabric pillar or a table
+    // planted in the side strip would otherwise stand square in front of the
+    // opening (the furniture row sits only 2.4m off the wall).
+    clearZones: [{ z: SIDE_STAIR_Z - hall.z, halfZ: SIDE_STAIR_HALF_WIDTH }],
     // Every pillar lit, not just every other pair (the user: "some pilars are
     // not lighting up") — at only 10 pillar pairs total in this hall, 20
     // live lights is well within budget; the density knob stays configurable
@@ -2137,6 +2344,9 @@ export function createFirstFloor(): THREE.Group {
   // slot (left side, 2nd door: 3 + 1) — the corridor's signage and the room's
   // own have to agree about which room you just walked into.
   buildAuditorium(group, room4, 'right', 4, y, auditoriumMats);
+
+  // The mid-corridor stairs down, through the wall gaps opened above.
+  for (const stair of SIDE_STAIRS) buildSideStair(group, stair);
 
   return group;
 }
