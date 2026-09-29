@@ -18,9 +18,19 @@
 // outlines to extrude from this string, so this is still the one place the
 // word itself is written down. It only knows the glyphs # D E V O X — anything
 // else throws at build time rather than silently dropping a letter.
+//
+// `screenWordmark`/`screenBand` dress Room 4's own stage screen, laid out the
+// way the real room's signage is (room7-signage-screen-red-wall.jpg): the
+// wordmark in the top corner, a coloured title band under it, partner names
+// along the bottom edge, and the actual session content filling everything
+// between. The band names what's on stage right now rather than listing a
+// schedule — the screen is showing a live-coding session, and a printed
+// schedule would go stale for exactly the same reason a printed date would.
 export const EVENT_SIGNAGE = {
   standingLetters: '#DEVOXX',
   crate: ['DEVOXX', 'BELGIUM'],
+  screenWordmark: 'DEVOXX',
+  screenBand: 'LIVE CODING · ON STAGE NOW',
 };
 
 export const SPONSOR_SIGNAGE = {

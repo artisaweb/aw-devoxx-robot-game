@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CinematicHallway } from './CinematicHallway';
 import { createDevoxxLetters, DevoxxLetters } from '../props/devoxxLetters';
 import { createRobotChargingDock, RobotChargingDock } from '../props/robotChargingDock';
-import { EVENT_SIGNAGE } from '../text/signage';
+import { EVENT_SIGNAGE, SPONSOR_SIGNAGE } from '../text/signage';
 
 // Rough blockout proportions from the real venue's floor plan
 // (one large rectangular hall, evenly spaced structural columns, two staircases
@@ -1783,9 +1783,45 @@ const AUDITORIUM_SCREEN_COLORS: Record<string, string> = {
   annotation: '#d2a8ff',
   plain: '#c9d1d9',
 };
-const AUDITORIUM_SCREEN_LINE_HEIGHT = 44;
-const AUDITORIUM_SCREEN_START_Y = 70;
-const AUDITORIUM_SCREEN_VISIBLE_LINES = 17;
+// Canvas dimensions match the screen mesh's own 30m x 7m aspect exactly (see
+// buildAuditorium's screenWidth/screenHeight). The old 1600x900 didn't, so
+// everything drawn on it came out stretched 2.4x horizontally — the code read
+// as very wide, very flat lettering.
+const AUDITORIUM_SCREEN_W = 2400;
+const AUDITORIUM_SCREEN_H = 560;
+// Signage chrome, laid out like room7-signage-screen-red-wall.jpg: wordmark in
+// the top corner, a title band across under it, partner names along the bottom
+// edge, session content filling everything between. The real screen's sponsors
+// are real companies' logos, so the strip here carries this game's own
+// fictional booth tenants instead (src/text/signage.ts) — read straight off
+// SPONSOR_SIGNAGE so the screen can never name a sponsor the hall doesn't have.
+const AUDITORIUM_SCREEN_WORDMARK_H = 74;
+const AUDITORIUM_SCREEN_BAND_Y = AUDITORIUM_SCREEN_WORDMARK_H;
+const AUDITORIUM_SCREEN_BAND_H = 40;
+const AUDITORIUM_SCREEN_STRIP_H = 58;
+// The "black overlay showing the live coding that happens now" — the content
+// area, in the same place the reference's full-bleed session image sits.
+const AUDITORIUM_SCREEN_PANEL = {
+  x: 30,
+  y: AUDITORIUM_SCREEN_BAND_Y + AUDITORIUM_SCREEN_BAND_H + 12,
+  w: AUDITORIUM_SCREEN_W - 60,
+  h: AUDITORIUM_SCREEN_H - AUDITORIUM_SCREEN_STRIP_H - 4 - (AUDITORIUM_SCREEN_BAND_Y + AUDITORIUM_SCREEN_BAND_H + 12),
+};
+const AUDITORIUM_SCREEN_PAD_X = 34;
+const AUDITORIUM_SCREEN_PAD_TOP = 18;
+const AUDITORIUM_SCREEN_PAD_BOTTOM = 12;
+const AUDITORIUM_SCREEN_FONT_SIZE = 28;
+const AUDITORIUM_SCREEN_LINE_HEIGHT = 36;
+const AUDITORIUM_SCREEN_TEXT_X = AUDITORIUM_SCREEN_PANEL.x + AUDITORIUM_SCREEN_PAD_X;
+const AUDITORIUM_SCREEN_START_Y = AUDITORIUM_SCREEN_PANEL.y + AUDITORIUM_SCREEN_PAD_TOP;
+// Derived, not hand-counted: the panel is now a box inside a larger layout, so
+// a nudge to the band or the sponsor strip has to be able to change how many
+// lines fit without silently pushing the last one out under the strip.
+const AUDITORIUM_SCREEN_VISIBLE_LINES =
+  Math.floor(
+    (AUDITORIUM_SCREEN_PANEL.h - AUDITORIUM_SCREEN_PAD_TOP - AUDITORIUM_SCREEN_PAD_BOTTOM - AUDITORIUM_SCREEN_FONT_SIZE) /
+      AUDITORIUM_SCREEN_LINE_HEIGHT,
+  ) + 1;
 const AUDITORIUM_SCREEN_CHARS_PER_SECOND = 26;
 const AUDITORIUM_SCREEN_LINE_HOLD = 0.4; // pause after a line finishes typing, before it scrolls up
 const AUDITORIUM_SCREEN_CURSOR_BLINK = 0.5;
@@ -1814,13 +1850,69 @@ function auditoriumScreenLineAt(i: number) {
   return AUDITORIUM_SCREEN_CODE[((i % n) + n) % n];
 }
 
+/**
+ * The screen's event dressing — everything outside the code panel. Drawn once,
+ * at texture creation: none of it animates, and redrawAuditoriumScreen() below
+ * only ever repaints the panel's own rectangle, so these pixels survive
+ * untouched for the life of the texture. (Repainting the whole canvas every
+ * frame just to put the same chrome back would be ~20 wasted draw calls a
+ * frame on a texture that already re-uploads in full.)
+ */
+function drawAuditoriumScreenChrome(ctx: CanvasRenderingContext2D): void {
+  // Deep purple into the dark red of the real room's walls, rather than the
+  // flat IDE grey this screen used to be edge to edge.
+  const grad = ctx.createLinearGradient(0, 0, 0, AUDITORIUM_SCREEN_H);
+  grad.addColorStop(0, '#1b1030');
+  grad.addColorStop(1, '#3c1220');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, AUDITORIUM_SCREEN_W, AUDITORIUM_SCREEN_H);
+
+  // Wordmark, top right. Same convention the hallway's stair screen already
+  // settled on: plain DEVOXX, no glyph between the two X's, no date — see
+  // createStairScreenTexture's own note.
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#7fd4f0';
+  ctx.font = '900 52px "Arial Narrow", Arial, sans-serif';
+  ctx.fillText(EVENT_SIGNAGE.screenWordmark, AUDITORIUM_SCREEN_W - 40, 58);
+
+  // Title band.
+  ctx.fillStyle = '#e8a33c';
+  ctx.fillRect(0, AUDITORIUM_SCREEN_BAND_Y, AUDITORIUM_SCREEN_W, AUDITORIUM_SCREEN_BAND_H);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#2a1705';
+  ctx.font = '700 24px Arial, sans-serif';
+  ctx.fillText(
+    EVENT_SIGNAGE.screenBand,
+    AUDITORIUM_SCREEN_W / 2,
+    AUDITORIUM_SCREEN_BAND_Y + AUDITORIUM_SCREEN_BAND_H - 12,
+  );
+
+  // Partner strip along the bottom edge — names only, set as plain type: these
+  // stand in for the reference's real logo lockups, and drawing fake logos for
+  // fictional companies would be inventing brands rather than dressing a room.
+  const stripY = AUDITORIUM_SCREEN_H - AUDITORIUM_SCREEN_STRIP_H;
+  ctx.fillStyle = '#07070b';
+  ctx.fillRect(0, stripY, AUDITORIUM_SCREEN_W, AUDITORIUM_SCREEN_STRIP_H);
+  const names = Object.values(SPONSOR_SIGNAGE).map((s) => s.name);
+  ctx.fillStyle = '#9aa3b2';
+  ctx.font = '700 26px Arial, sans-serif';
+  names.forEach((name, i) => {
+    const x = (AUDITORIUM_SCREEN_W / (names.length + 1)) * (i + 1);
+    ctx.fillText(name, x, stripY + AUDITORIUM_SCREEN_STRIP_H / 2 + 9);
+  });
+
+  ctx.textAlign = 'left';
+}
+
 function redrawAuditoriumScreen(): void {
   if (!auditoriumScreenCtx || !auditoriumScreenTexture) return;
   const ctx = auditoriumScreenCtx;
-  const canvas = ctx.canvas;
+  const panel = AUDITORIUM_SCREEN_PANEL;
   ctx.fillStyle = '#0d1117'; // dark IDE background
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.font = '34px "Courier New", monospace';
+  ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
+  ctx.textAlign = 'left';
+  ctx.font = `${AUDITORIUM_SCREEN_FONT_SIZE}px "Courier New", monospace`;
   ctx.textBaseline = 'top';
 
   for (let row = 0; row < AUDITORIUM_SCREEN_VISIBLE_LINES; row++) {
@@ -1829,13 +1921,13 @@ function redrawAuditoriumScreen(): void {
     const text = isCurrent ? line.text.slice(0, Math.floor(auditoriumTypedChars)) : line.text;
     ctx.fillStyle = AUDITORIUM_SCREEN_COLORS[line.kind];
     const rowY = AUDITORIUM_SCREEN_START_Y + row * AUDITORIUM_SCREEN_LINE_HEIGHT;
-    ctx.fillText(text, 60, rowY);
+    ctx.fillText(text, AUDITORIUM_SCREEN_TEXT_X, rowY);
     // Blinking caret only on the line actively being typed, so it reads as
     // "live," not a static screenshot.
     if (isCurrent && auditoriumCursorOn) {
-      const caretX = 60 + ctx.measureText(text).width + 6;
+      const caretX = AUDITORIUM_SCREEN_TEXT_X + ctx.measureText(text).width + 5;
       ctx.fillStyle = '#c9d1d9';
-      ctx.fillRect(caretX, rowY, 16, 30);
+      ctx.fillRect(caretX, rowY, 13, AUDITORIUM_SCREEN_FONT_SIZE - 3);
     }
   }
   auditoriumScreenTexture.needsUpdate = true;
@@ -1874,11 +1966,12 @@ export function updateAuditoriumScreen(dt: number): void {
 
 function createAuditoriumScreenTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 1600;
-  canvas.height = 900;
+  canvas.width = AUDITORIUM_SCREEN_W;
+  canvas.height = AUDITORIUM_SCREEN_H;
   auditoriumScreenCtx = canvas.getContext('2d')!;
   auditoriumScreenTexture = new THREE.CanvasTexture(canvas);
   auditoriumScreenTexture.colorSpace = THREE.SRGBColorSpace;
+  drawAuditoriumScreenChrome(auditoriumScreenCtx);
   redrawAuditoriumScreen();
   return auditoriumScreenTexture;
 }
