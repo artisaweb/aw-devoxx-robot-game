@@ -1,201 +1,199 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
- * The venue's free-standing DEVOXX letters: chunky white slab glyphs with the
- * final X in orange, standing on the floor (see
- * private/assets/reference/venue/videos/frames/letters_hi_3s.jpg — the real
- * ones sit in the open, roughly 1.5 m tall, and the same set gets moved around
- * the building over the week).
+ * Free-standing "#DEVOXX" letters for a three.js scene, like the painted block letters on the
+ * Devoxx stage: white letters, a light grey #, and the last X in orange.
  *
- * Built in metres, origin on the floor at the wordmark's own centre, reading
- * face toward +Z:
+ * Built in metres: 1,00 m tall and 0,30 m deep by default; "#DEVOXX" is about 6,0 m long.
+ * The origin sits on the floor at the centre of the word and the letters face +Z.
  *
- *   const letters = createDevoxxLetters();
- *   letters.object.position.set(0, 0, 8);
- *   letters.object.rotation.y = Math.PI;   // turn the face toward -Z
+ *   const letters = createDevoxxLetters();          // or { height: 1.2, depth: 0.35 }
  *   scene.add(letters.object);
+ *   letters.activate();       // knocks a random standing letter over; call it on a fallen one to stand it up
+ *   letters.activate(6);      // knocks over (or lifts) letter 6, the orange X
+ *   letters.reset();          // stands every letter up again
+ *   letters.update(delta);    // call every frame with the elapsed seconds
  *
- * Every glyph is a real extruded shape rather than a canvas-textured plane —
- * these are walked past at arm's length in all three spots they're placed, and
- * a flat billboard reads as a sticker the moment the camera swings off-axis.
+ * Supported characters: # D E V O X. There is no out-of-stock state: the letters are either there or not.
  *
- * `letterColliders` gives each glyph's own local x offset + footprint radius so
- * the caller can turn them into real `Collider`s at whatever position/rotation
- * it placed the group (see ExhibitionHall.ts's addDevoxxLetters) — the caller
- * can't derive those from the group itself, and a hand-copied second list of
- * offsets is exactly the drift this project has been bitten by before.
+ * Adopted from private/assets/ai-fe-playground/devoxx-letters.js. Two additions for the game's
+ * sake, both read-only and neither touching the topple itself: `letterColliders` (so the caller can
+ * give each glyph a real Collider — see ExhibitionHall.ts's addDevoxxLetters) and `isStanding`, so a
+ * caller can drop a fallen glyph's collider instead of leaving an invisible wall where a letter is
+ * visibly lying flat on the floor.
  */
-
-// Unit em: every glyph is authored 1.0 tall with y from 0 (floor) to 1, then
-// scaled to the requested height. Stroke thickness is the one number the
-// whole alphabet is proportioned from.
-const STROKE = 0.24;
-const GLYPH_GAP = 0.1; // between glyph bounding boxes, same unit em
-
-/** Each glyph as a THREE.Shape in the unit em above. Only the six DEVOXX needs. */
-const GLYPHS = {
-  D() {
-    const s = new THREE.Shape();
-    s.moveTo(0, 0);
-    s.lineTo(0.42, 0);
-    s.bezierCurveTo(0.92, 0.06, 0.92, 0.94, 0.42, 1);
-    s.lineTo(0, 1);
-    s.closePath();
-    const hole = new THREE.Path();
-    hole.moveTo(STROKE, STROKE);
-    hole.lineTo(0.42, STROKE);
-    hole.bezierCurveTo(0.66, 0.28, 0.66, 0.72, 0.42, 1 - STROKE);
-    hole.lineTo(STROKE, 1 - STROKE);
-    hole.closePath();
-    s.holes.push(hole);
-    return s;
-  },
-  E() {
-    const s = new THREE.Shape();
-    const mid = STROKE / 2;
-    s.moveTo(0, 0);
-    s.lineTo(0.62, 0);
-    s.lineTo(0.62, STROKE);
-    s.lineTo(STROKE, STROKE);
-    s.lineTo(STROKE, 0.5 - mid);
-    s.lineTo(0.56, 0.5 - mid);
-    s.lineTo(0.56, 0.5 + mid);
-    s.lineTo(STROKE, 0.5 + mid);
-    s.lineTo(STROKE, 1 - STROKE);
-    s.lineTo(0.62, 1 - STROKE);
-    s.lineTo(0.62, 1);
-    s.lineTo(0, 1);
-    s.closePath();
-    return s;
-  },
-  V() {
-    const s = new THREE.Shape();
-    s.moveTo(0, 1);
-    s.lineTo(0.24, 1);
-    s.lineTo(0.37, 0.26); // inner apex, a hair above the floor — a real V's ink trap
-    s.lineTo(0.5, 1);
-    s.lineTo(0.74, 1);
-    s.lineTo(0.44, 0);
-    s.lineTo(0.3, 0);
-    s.closePath();
-    return s;
-  },
-  O() {
-    const s = new THREE.Shape();
-    s.absellipse(0.4, 0.5, 0.4, 0.5, 0, Math.PI * 2, false);
-    const hole = new THREE.Path();
-    hole.absellipse(0.4, 0.5, 0.4 - STROKE, 0.5 - STROKE, 0, Math.PI * 2, true);
-    s.holes.push(hole);
-    return s;
-  },
-  // Every vertex solved from the four arm edges rather than eyeballed — the
-  // notches are where those edges actually cross (arm A runs top-left to
-  // bottom-right, arm B top-right to bottom-left, both 0.24 wide in x), so
-  // the waist stays symmetric instead of drifting off-centre.
-  X() {
-    const s = new THREE.Shape();
-    s.moveTo(0, 1);
-    s.lineTo(0.24, 1);
-    s.lineTo(0.38, 0.731); // top notch
-    s.lineTo(0.52, 1);
-    s.lineTo(0.76, 1);
-    s.lineTo(0.5, 0.5); // right notch
-    s.lineTo(0.76, 0);
-    s.lineTo(0.52, 0);
-    s.lineTo(0.38, 0.269); // bottom notch
-    s.lineTo(0.24, 0);
-    s.lineTo(0, 0);
-    s.lineTo(0.26, 0.5); // left notch
-    s.closePath();
-    return s;
-  },
-};
-
-const WORD = ['D', 'E', 'V', 'O', 'X', 'X'];
-
 export function createDevoxxLetters({
-  height = 1.5,
-  depth = 0.5,
-  color = 0xf4f3ee,
-  // The last X only — the real set's one coloured glyph. Defaults to the same
-  // orange the entrance foyer's own accent strip uses, since that's the one
-  // spot where the two are in frame together.
-  accentColor = 0xff8a3d,
-  emissiveIntensity = 0.35,
+  text = '#DEVOXX', height = 1.0, depth = 0.3, gap = 0.07,
+  color = 0xf3f1ec, hashColor = 0xc5c9ce, accentColor = 0xe06f0b, accentLast = true, reducedMotion = false,
 } = {}) {
   const root = new THREE.Group();
   root.name = 'DevoxxLetters';
 
-  // Extruded at depth/height so the single uniform scale below lands the
-  // requested depth in metres — scaling x/y only would squash the extrusion
-  // instead, and scaling the whole Group would scale any collider maths the
-  // caller derives from it too.
-  const extrude = { depth: depth / height, bevelEnabled: false, curveSegments: 8 };
+  // ---------- glyphs, drawn on a 1-unit-tall grid ----------
+  const T = 0.2; // stroke weight
+  function roundRect(p, x0, y0, x1, y1, r) {
+    p.moveTo(x0 + r, y0); p.lineTo(x1 - r, y0); p.quadraticCurveTo(x1, y0, x1, y0 + r);
+    p.lineTo(x1, y1 - r); p.quadraticCurveTo(x1, y1, x1 - r, y1); p.lineTo(x0 + r, y1);
+    p.quadraticCurveTo(x0, y1, x0, y1 - r); p.lineTo(x0, y0 + r); p.quadraticCurveTo(x0, y0, x0 + r, y0);
+    return p;
+  }
+  const poly = (pts) => { const s = new THREE.Shape(); pts.forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y))); return s; };
 
-  const geometries = WORD.map((char) => {
-    const geo = new THREE.ExtrudeGeometry(GLYPHS[char](), extrude);
-    geo.scale(height, height, height);
-    geo.computeBoundingBox();
-    return geo;
+  const GLYPHS = {
+    D: { w: 0.78, shapes() {
+      const w = this.w, R = 0.34, r = 0.15;
+      const s = new THREE.Shape();
+      s.moveTo(0, 0); s.lineTo(w - R, 0); s.quadraticCurveTo(w, 0, w, R); s.lineTo(w, 1 - R);
+      s.quadraticCurveTo(w, 1, w - R, 1); s.lineTo(0, 1); s.lineTo(0, 0);
+      const h = new THREE.Path();
+      h.moveTo(T, T); h.lineTo(w - T - r, T); h.quadraticCurveTo(w - T, T, w - T, T + r); h.lineTo(w - T, 1 - T - r);
+      h.quadraticCurveTo(w - T, 1 - T, w - T - r, 1 - T); h.lineTo(T, 1 - T); h.lineTo(T, T);
+      s.holes.push(h);
+      return [s];
+    } },
+    E: { w: 0.64, shapes() {
+      const w = this.w, m = w * 0.86;
+      return [poly([[0, 0], [w, 0], [w, T], [T, T], [T, 0.5 - T / 2], [m, 0.5 - T / 2], [m, 0.5 + T / 2], [T, 0.5 + T / 2], [T, 1 - T], [w, 1 - T], [w, 1], [0, 1]])];
+    } },
+    V: { w: 0.86, shapes() {
+      const w = this.w;
+      return [poly([[0, 1], [0.235, 1], [w / 2, 0.3], [w - 0.235, 1], [w, 1], [w / 2 + 0.14, 0], [w / 2 - 0.14, 0]])];
+    } },
+    O: { w: 0.86, shapes() {
+      const s = roundRect(new THREE.Shape(), 0, 0, this.w, 1, 0.36);
+      s.holes.push(roundRect(new THREE.Path(), T, T, this.w - T, 1 - T, 0.16));
+      return [s];
+    } },
+    X: { w: 0.8, shapes() {
+      // two crossing arms of width a at top and bottom
+      const w = this.w, a = 0.25, s = (w - 2 * a) / (2 * (w - a)), k = w - a;
+      const cy = 1 - s, sx = 0.5 * k; // crotch heights and side notch offsets
+      return [poly([[0, 1], [a, 1], [w / 2, cy], [w - a, 1], [w, 1], [w - sx, 0.5], [w, 0], [w - a, 0], [w / 2, 1 - cy], [a, 0], [0, 0], [sx, 0.5]])];
+    } },
+    '#': { w: 0.84, shapes() {
+      // two slanted uprights and two cross bars; the bars are made a hair thinner in depth (see below)
+      const w = this.w, lean = 0.1, sw = 0.17;
+      const upright = (x) => poly([[x, 0], [x + sw, 0], [x + sw + lean, 1], [x + lean, 1]]);
+      const bar = (y) => poly([[0, y], [w, y], [w, y + 0.16], [0, y + 0.16]]);
+      return [upright(0.16), upright(0.16 + 0.34), Object.assign(bar(0.27), { bar: true }), Object.assign(bar(0.6), { bar: true })];
+    } },
+  };
+
+  // ---------- build the word ----------
+  const chars = [...text.toUpperCase()];
+  chars.forEach((c) => { if (!GLYPHS[c]) throw new Error(`createDevoxxLetters: no glyph for "${c}". Supported: # D E V O X`); });
+  const lastIndex = chars.length - 1;
+  const matWhite = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+  const matHash = new THREE.MeshStandardMaterial({ color: hashColor, roughness: 0.5 });
+  const matAccent = new THREE.MeshStandardMaterial({ color: accentColor, roughness: 0.45 });
+  const D = depth / height, B = 0.018; // depth and bevel on the unit grid
+  const totalW = chars.reduce((sum, c) => sum + GLYPHS[c].w, 0) + gap / height * (chars.length - 1);
+
+  let cursor = -totalW / 2;
+  const letters = chars.map((c, i) => {
+    const g = GLYPHS[c];
+    const mat = c === '#' ? matHash : accentLast && i === lastIndex ? matAccent : matWhite;
+    // Each letter hangs from a pivot on its bottom front edge, so it can tip forward onto the floor
+    const pivot = new THREE.Group();
+    pivot.position.set((cursor + g.w / 2) * height, 0, (D / 2 + B) * height);
+    root.add(pivot);
+    for (const shape of g.shapes()) {
+      const inset = shape.bar ? 0.004 : 0; // keeps the # bars from z-fighting with the uprights
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: D - inset * 2, bevelEnabled: true, bevelThickness: B, bevelSize: B, bevelSegments: 3, curveSegments: 10,
+      });
+      geo.translate(-g.w / 2, B, -D / 2 + inset);
+      geo.scale(height, height, height);
+      geo.translate(0, 0, -(D / 2 + B) * height); // relative to the pivot on the front edge
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = mesh.receiveShadow = true;
+      pivot.add(mesh);
+    }
+    cursor += g.w + gap / height;
+    return { char: c, pivot, angle: 0, target: 0, vel: 0, resolve: null, width: g.w * height };
   });
 
-  // Lay the glyphs out left to right from their real bounding boxes, not from
-  // the authored widths — the D's and O's curves decide their own extents.
-  const gap = GLYPH_GAP * height;
-  const widths = geometries.map((g) => g.boundingBox.max.x - g.boundingBox.min.x);
-  const width = widths.reduce((sum, w) => sum + w, 0) + gap * (WORD.length - 1);
+  // ---------- falling ----------
+  const DOWN = Math.PI / 2; // lying on its face
+  const G = 9.81;
 
-  const letterColliders = [];
-  let cursor = -width / 2;
-  geometries.forEach((geo, i) => {
-    const bb = geo.boundingBox;
-    const centerX = cursor + widths[i] / 2;
-    geo.translate(centerX - (bb.min.x + bb.max.x) / 2, -bb.min.y, -depth / 2);
-    // Half the footprint's own diagonal — the same circle-around-a-box
-    // approximation every other boxy prop in this game uses for its collider.
-    letterColliders.push({ x: centerX, radius: Math.hypot(widths[i], depth) / 2 });
-    cursor += widths[i] + gap;
-  });
+  function activate(index) {
+    let i = index;
+    if (i === undefined) {
+      const standing = letters.map((l, k) => k).filter((k) => letters[k].target === 0 && !letters[k].resolve);
+      if (!standing.length) return Promise.resolve(false);
+      i = standing[Math.floor(Math.random() * standing.length)];
+    }
+    const l = letters[i];
+    if (!l || l.resolve) return Promise.resolve(false);
+    l.target = l.target === 0 ? DOWN : 0;
+    l.vel = l.target === DOWN ? 0.4 : 0; // a small nudge to start the tip
+    return new Promise((resolve) => { l.resolve = resolve; });
+  }
 
-  // Merged per material: the whole wordmark is 2 draw calls rather than 6,
-  // and it gets placed three times over.
-  const material = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.55,
-    // These stand in a near-black corridor and a blacked-out auditorium as
-    // well as the bright foyer — a purely lit material reads as a flat grey
-    // slab in two of the three, same reason the hallway's fabric pillars and
-    // room signage carry their own emissive tint.
-    emissive: color,
-    emissiveIntensity,
-  });
-  const accentMaterial = new THREE.MeshStandardMaterial({
-    color: accentColor,
-    roughness: 0.55,
-    emissive: accentColor,
-    emissiveIntensity,
-  });
+  function reset() {
+    letters.forEach((l) => {
+      l.angle = 0; l.target = 0; l.vel = 0;
+      l.pivot.rotation.x = 0;
+      if (l.resolve) { l.resolve(true); l.resolve = null; }
+    });
+  }
 
-  const accentIndex = WORD.length - 1;
-  const plain = mergeGeometries(geometries.filter((_, i) => i !== accentIndex));
-  root.add(new THREE.Mesh(plain, material));
-  root.add(new THREE.Mesh(geometries[accentIndex], accentMaterial));
-  // mergeGeometries clones into a new buffer; the sources it consumed are
-  // dead weight from here on (the accent glyph's own geometry is still live).
-  geometries.forEach((geo, i) => {
-    if (i !== accentIndex) geo.dispose();
-  });
+  function update(dt) {
+    dt = Math.min(dt, 0.05);
+    for (const l of letters) {
+      if (!l.resolve) continue;
+      if (reducedMotion) { l.angle = l.target; }
+      else if (l.target === DOWN) {
+        // topple: gravity on the letter's centre of mass, pivoting on its front edge
+        const lever = Math.hypot(0.5, D / 2 + B) * height;
+        const tipOffset = Math.atan2(D / 2 + B, 0.5); // angle it must pass before it truly falls
+        l.vel += (G / lever) * Math.sin(Math.max(0.02, l.angle - tipOffset + 0.35)) * dt * 1.4;
+        l.angle += l.vel * dt;
+        if (l.angle >= DOWN) {
+          l.angle = DOWN;
+          l.vel = Math.abs(l.vel) > 1.2 ? -Math.abs(l.vel) * 0.18 : 0; // one small bounce off the floor
+        }
+      } else {
+        // stand back up with an eased lift
+        l.vel = Math.min(l.vel + dt * 4, 2.2);
+        l.angle = Math.max(0, l.angle - l.vel * dt);
+      }
+      l.pivot.rotation.x = l.angle;
+      const settled = l.target === DOWN ? l.angle >= DOWN - 1e-4 && l.vel === 0 : l.angle <= 0;
+      if (settled) { l.angle = l.target; l.vel = 0; l.pivot.rotation.x = l.angle; l.resolve(true); l.resolve = null; }
+    }
+  }
+
+  function dispose() {
+    root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    [matWhite, matHash, matAccent].forEach((m) => m.dispose());
+  }
 
   return {
     object: root,
-    width,
-    letterColliders,
-    dispose() {
-      root.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
-        if (o.material) o.material.dispose();
-      });
-    },
+    letters: letters.map((l) => l.char),
+    width: totalW * height,
+    /**
+     * Per-glyph offset along the word's own local x axis, plus the footprint radius of a circle
+     * around that glyph — half its own diagonal, the same circle-around-a-box approximation every
+     * other boxy prop in this game uses for its collider. The pivot already sits at the glyph's
+     * centre, so this is just read back off it rather than re-derived from the layout cursor.
+     */
+    letterColliders: letters.map((l) => ({ x: l.pivot.position.x, radius: Math.hypot(l.width, depth) / 2 })),
+    /** False from the moment a glyph starts tipping over (and true again the moment it starts getting back up). */
+    isStanding: (i) => letters[i] !== undefined && letters[i].target === 0,
+    /**
+     * True only once a glyph is all the way down and settled — still false for the whole fall.
+     * A caller giving a fallen letter's collider up has to wait for this: while it's tipping it is
+     * still visibly standing in the way, and dropping the collider at the start of the fall lets
+     * the mover walk straight through the letter it just knocked over.
+     */
+    isFallen: (i) => letters[i] !== undefined && letters[i].target === DOWN && !letters[i].resolve,
+    activate,
+    reset,
+    get busy() { return letters.some((l) => l.resolve); },
+    update,
+    dispose,
   };
 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CinematicHallway } from './CinematicHallway';
-import { createDevoxxLetters } from '../props/devoxxLetters';
+import { createDevoxxLetters, DevoxxLetters } from '../props/devoxxLetters';
 import { EVENT_SIGNAGE } from '../text/signage';
 
 // Rough blockout proportions from the real venue's floor plan
@@ -1053,9 +1053,9 @@ export function createExhibitionHall(): THREE.Group {
   const halfW = HALL_WIDTH / 2;
   const halfD = HALL_DEPTH / 2;
   // Cleared, not appended to — a second call would otherwise leave colliders
-  // for a set of letters no longer in any scene, same reason hallwayInstance
-  // is reassigned rather than collected.
-  groundFloorLetterColliders.length = 0;
+  // (and a live, still-ticking prop) for a set of letters no longer in any
+  // scene, same reason hallwayInstance is reassigned rather than collected.
+  clearDevoxxLetters('ground');
 
   // Colors from the real venue: the exhibition floor reads bright and open
   // (white walls/columns, mid-gray carpet) under a tall black ceiling void —
@@ -1233,25 +1233,84 @@ export function getStairEnclosureColliders(): Collider[] {
 }
 
 // The free-standing DEVOXX letters (src/props/devoxxLetters.js), placed in the
-// three spots the real set turns up over the week — the user: "the devoxx
-// letters: can be reused in the cinema room, the hallway and the ground floor
-// between the small stair and the closed doors leading to the reception". One
-// prop, three placements; each one's position/rotation lives at its own build
-// site below, and every glyph it plants registers a real collider here so the
-// set never becomes walk-through set dressing.
+// two spots the real set turns up — the user: "can be used in the cinema room
+// on the podium and in the exhibition hall above the stair, would remove the
+// devoxx letters in the hall on the first floor". One prop, two placements;
+// each one's position/rotation lives at its own build site below, and every
+// glyph it plants registers a real collider here so the set never becomes
+// walk-through set dressing.
+//
+// The prop is the user's own playground prototype
+// (private/assets/ai-fe-playground/devoxx-letters.html), adopted wholesale: each
+// glyph hangs off a pivot on its bottom front edge and topples forward under
+// its own gravity when something runs into it. Note the topple always goes
+// toward the wordmark's local +z, whichever side it was hit from — so the
+// podium set, which faces the seats the robot walks in from, always falls
+// toward the robot rather than away. At this scale it lands about where the
+// robot is standing and reads as comic; per-side fall directions would mean
+// changing the prototype's own animation, which isn't what was asked for.
 //
 // DEVOXX_LETTER_HEIGHT is deliberately above the robot's own max jump
 // (JUMP_VELOCITY 7 under this game's gravity tops out around 1.36m) — nothing
-// in this file gives the letters a standable top surface, so a glyph short
+// in this file gives a standing glyph a standable top surface, so a glyph short
 // enough to jump onto would drop the robot straight through it, the same bug
-// the hallway's tables hit ("when jumping on the table, i fall into it").
+// the hallway's tables hit ("when jumping on the table, i fall into it"). It
+// matters more since the letters moved onto Room 4's podium, which is itself a
+// 0.4m platform: that much of the reach is free before the jump even starts.
 const DEVOXX_LETTER_HEIGHT = 1.5;
 const groundFloorLetterColliders: Collider[] = [];
 const firstFloorLetterColliders: Collider[] = [];
 
+/**
+ * One placed wordmark: the live prop plus, per glyph, the world position and the
+ * very Collider object sitting in the arrays above — so toppling a glyph can
+ * retire its collider by mutating it in place, and neither Game.ts's collider
+ * composition nor KnowledgeRun's own `robotOnly` filter has to know this
+ * happens (nothing is ever added to or removed from those arrays).
+ */
+interface PlacedDevoxxLetters {
+  floor: Floor;
+  /** The surface the set stands on — a mover below it can't reach the letters, see updateDevoxxLetters. */
+  baseY: number;
+  prop: DevoxxLetters;
+  glyphs: { index: number; x: number; z: number; radius: number; collider: Collider }[];
+}
+const placedDevoxxLetters: PlacedDevoxxLetters[] = [];
+
 /** Real colliders for every DEVOXX glyph actually built, per floor — populated by addDevoxxLetters() at build time (never a parallel hand-kept coordinate list, same reason getHallwayPropColliders() reads the live hallway instance). */
 export function getDevoxxLetterColliders(floor: Floor): Collider[] {
   return floor === 'ground' ? groundFloorLetterColliders : firstFloorLetterColliders;
+}
+
+/**
+ * Stands every glyph on both floors back up and un-retires its collider.
+ *
+ * Needed because the letters outlive the levels: one Robot walks all three, and
+ * the two floor groups are built once (Game.ts's own field initializers) rather
+ * than per level, so a glyph knocked over stays knocked over — which is the
+ * right fiction *within* a day and the wrong one across days. Only restartDay
+ * calls this; a letter toppled during Voxxy's run is still lying there when
+ * Biggy walks the same floor at lunchtime, because it's the same day.
+ *
+ * Restoring the collider is what makes this more than cosmetic: without it a
+ * letter would stand back up as something the robot walks straight through.
+ */
+export function resetDevoxxLetters(): void {
+  for (const placed of placedDevoxxLetters) {
+    placed.prop.reset();
+    for (const glyph of placed.glyphs) {
+      glyph.collider.radius = glyph.radius;
+      delete glyph.collider.height; // standing glyphs block at every height — see addDevoxxLetters' own call site comments
+    }
+  }
+}
+
+/** Drops every record for one floor — the floor's own create* function is about to rebuild them (see createExhibitionHall's own reset comment). */
+function clearDevoxxLetters(floor: Floor): void {
+  for (let i = placedDevoxxLetters.length - 1; i >= 0; i--) {
+    if (placedDevoxxLetters[i].floor === floor) placedDevoxxLetters.splice(i, 1);
+  }
+  (floor === 'ground' ? groundFloorLetterColliders : firstFloorLetterColliders).length = 0;
 }
 
 /**
@@ -1262,22 +1321,123 @@ export function getDevoxxLetterColliders(floor: Floor): Collider[] {
  */
 function addDevoxxLetters(
   group: THREE.Group,
-  out: Collider[],
+  floor: Floor,
   placement: { x: number; y: number; z: number; rotationY: number },
 ): void {
-  const letters = createDevoxxLetters({ height: DEVOXX_LETTER_HEIGHT });
+  const out = floor === 'ground' ? groundFloorLetterColliders : firstFloorLetterColliders;
+  const letters = createDevoxxLetters({
+    text: EVENT_SIGNAGE.standingLetters,
+    height: DEVOXX_LETTER_HEIGHT,
+  });
   letters.object.position.set(placement.x, placement.y, placement.z);
   letters.object.rotation.y = placement.rotationY;
   group.add(letters.object);
 
   const cos = Math.cos(placement.rotationY);
   const sin = Math.sin(placement.rotationY);
-  for (const glyph of letters.letterColliders) {
-    out.push({
+  const placed: PlacedDevoxxLetters = { floor, baseY: placement.y, prop: letters, glyphs: [] };
+  letters.letterColliders.forEach((glyph, index) => {
+    const collider: Collider = {
       x: placement.x + glyph.x * cos,
       z: placement.z - glyph.x * sin,
       radius: glyph.radius,
-    });
+    };
+    out.push(collider);
+    placed.glyphs.push({ index, x: collider.x, z: collider.z, radius: glyph.radius, collider });
+  });
+  placedDevoxxLetters.push(placed);
+}
+
+/**
+ * Per-frame tick for both letter sets on `floor`, and the "ran into it" trigger.
+ *
+ * `moverSizeScale` is the robot's own `sizeScale`: a collider holds any mover
+ * off at `radius + MOVER_CLEARANCE * sizeScale` (see Robot.ts's colliderReach),
+ * so a fixed trigger distance would simply never fire for a grown Biggy, who
+ * gets held further out the bigger he is — the same failure LunchRush's
+ * groundReachFor() was written to fix ("i was running into it and it did
+ * nothing"). Deriving it from the same term keeps the two in step at every
+ * size instead of only at the extremes.
+ *
+ * A glyph's collider is retired only once it is all the way down and settled,
+ * never while it is falling. It then lies flat, roughly `depth` (0.3m) tall,
+ * which is Robot.ts's own AUTO_STEP_HEIGHT — genuinely steppable — so keeping
+ * it would leave an invisible wall where the player can see there's no longer a
+ * letter standing.
+ *
+ * Getting this wrong is what made the letters walk-through for a pass (the
+ * user: "we can walk through the letters now, that is not a good evolution").
+ * Two mistakes compounded: the collider was given up the instant the topple
+ * *started*, and the trigger radius was 0.2m wider than the push-out. Together
+ * that meant a glyph fell and went intangible slightly before the robot could
+ * ever be blocked by it, so walking at the wordmark dropped every glyph in
+ * range and passed straight through. Hence both rules here: the trigger sits at
+ * the push-out distance exactly, so it only fires on real contact, and the
+ * collider outlives the fall.
+ *
+ * Contact plus height is the trigger; there's deliberately no "and it's moving"
+ * test. The only way to that distance is to walk into the glyph, since its own
+ * collider is what holds the robot there — and a position-delta movement check
+ * would read as *stopped* in precisely the frame the robot is pressed up
+ * against the letter, which is the one frame that has to count.
+ *
+ * The height gate is not belt-and-braces, it's load-bearing, and Room 4's
+ * podium set is why. Those letters stand on the stage deck, while the stage's
+ * own colliders are a row of circles (getAuditoriumStageColliders) rather than
+ * one solid slab — so a robot down on the apron, threading the gap between two
+ * of those circles, gets to within ~1.93m of the letter row against a ~2.06m
+ * trigger. Without this gate the podium letters would topple as the player
+ * merely walked past the stage, never having jumped up to them. Requiring the
+ * mover to be at the set's own standing surface says the real rule directly:
+ * you have to be up there with them.
+ */
+export function updateDevoxxLetters(
+  dt: number,
+  floor: Floor,
+  mover?: { x: number; y: number; z: number; sizeScale: number },
+): void {
+  for (const placed of placedDevoxxLetters) {
+    if (placed.floor !== floor) continue;
+    placed.prop.update(dt);
+    // Every glyph's collider tracks the glyph's own real state, every frame,
+    // rather than being switched off at the moment something decides to topple
+    // it. One rule, so a collider can never disagree with what's on screen —
+    // including after resetDevoxxLetters stands the whole set back up.
+    //
+    // Retiring sets both fields, for the two movers that read them
+    // differently: `height` is what actually frees the robot — Robot.tryMove
+    // skips any collider whose height the mover is already at or above, and
+    // nothing in this game stands below y=0 — while the hazards' own loops have
+    // no height logic at all and only ever see `minDist = c.radius + h.radius`,
+    // so zeroing the radius shrinks their berth to their own body. They still
+    // walk around a fallen glyph rather than through it, which is what it looks
+    // like they should do.
+    for (const glyph of placed.glyphs) {
+      const fallen = placed.prop.isFallen(glyph.index);
+      if (fallen && glyph.collider.radius !== 0) {
+        glyph.collider.radius = 0;
+        glyph.collider.height = Number.NEGATIVE_INFINITY;
+      } else if (!fallen && glyph.collider.radius === 0) {
+        glyph.collider.radius = glyph.radius;
+        delete glyph.collider.height;
+      }
+    }
+
+    // 0.2 is under Room 4's own STAGE_HEIGHT (0.4), so the apron below can
+    // never qualify, while still allowing for landing/float noise on the deck.
+    if (!mover || mover.y < placed.baseY - 0.2) continue;
+    for (const glyph of placed.glyphs) {
+      if (!placed.prop.isStanding(glyph.index)) continue;
+      // Exactly the push-out distance this glyph holds the robot at, plus only
+      // enough slack to survive floating-point noise. Anything wider would tip
+      // the letter before the robot could touch it — see this function's own
+      // comment on the walk-through regression.
+      const contact = glyph.radius + MOVER_CLEARANCE * mover.sizeScale + 0.05;
+      const dx = mover.x - glyph.x;
+      const dz = mover.z - glyph.z;
+      if (dx * dx + dz * dz > contact * contact) continue;
+      void placed.prop.activate(glyph.index);
+    }
   }
 }
 
@@ -1992,9 +2152,10 @@ function buildAuditorium(
     group.add(strut);
   }
 
-  // The DEVOXX letters (see addDevoxxLetters) facing the seats — the third of
-  // the three spots the same set gets reused in, and now up on the stage deck
-  // where the real ones stand (keynote_hi_3s.jpg).
+  // The DEVOXX letters (see addDevoxxLetters) facing the seats — one of the
+  // two spots the same set gets reused in, up on the stage deck where the real
+  // ones stand (keynote_hi_3s.jpg). The user: "can be used in the cinema room
+  // on the podium".
   //
   // They sat on the apron floor until the stage became a real platform
   // (STAGE_HEIGHT), because a robot walking clean through the stage while
@@ -2004,12 +2165,13 @@ function buildAuditorium(
   // the podium and the letters are objects you walk around, not scenery you
   // pass through.
   //
-  // Their colliders carry no `height`, unlike the stage's own, so they block
-  // at every level — which is right: at floor level the stage already blocks
-  // this footprint, and once you're up on the deck the letters should still
-  // be solid. Nothing can jump over them either; they stand 1.5m on a 0.4m
-  // deck, well past the ~1.36m jump.
-  addDevoxxLetters(group, firstFloorLetterColliders, {
+  // A standing glyph's collider carries no `height`, unlike the stage's own,
+  // so it blocks at every level — which is right: at floor level the stage
+  // already blocks this footprint, and once you're up on the deck the letters
+  // should still be solid. Nothing can jump over them either; they stand 1.5m
+  // on a 0.4m deck, well past the ~1.36m jump. A glyph knocked over by a robot
+  // running into it gives its collider up entirely (updateDevoxxLetters).
+  addDevoxxLetters(group, 'first', {
     x: stageSpec.x,
     y: stageSpec.topY,
     // Toward the deck's front edge rather than its middle, so they read
@@ -2237,7 +2399,7 @@ export function createFirstFloor(): THREE.Group {
   const hall = HALL_ZONE;
   const room4 = ROOM4_ZONE;
   const y = FLOOR_HEIGHT;
-  firstFloorLetterColliders.length = 0; // see createExhibitionHall's own reset
+  clearDevoxxLetters('first'); // see createExhibitionHall's own reset
   const hallWallHeight = 6; // end-caps only — CinematicHallway's own side walls use HALLWAY_CEILING_HEIGHT-derived scale
 
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x2e2b33 });
@@ -2337,32 +2499,12 @@ export function createFirstFloor(): THREE.Group {
   group.add(unusedCeiling);
   group.add(createLaserBarrier(hall.x, y, hallNearZ - MOVER_CLEARANCE, hall.halfW));
 
-  // The DEVOXX letters again (see addDevoxxLetters), a short walk in from
-  // where Stairs A/B drop you — the first thing Droid sees on arriving, and
-  // the hallway's only real landmark between the laser barrier and Room 3's
-  // signage.
-  //
-  // Turned to face the corridor (+x) and standing just *outside* its walkable
-  // edge rather than across it: at ~7.5m wide the wordmark would otherwise be
-  // a solid wall across the middle of a 14m corridor, and Level 2's whole
-  // hazard design is six attendees chasing straight down that corridor with
-  // turn-rate-limited steering and no pathfinding — the same shape that made
-  // the wide lunch tables an unbeatable hiding spot downstairs (see
-  // LUNCH_TABLE_ZONES). Here it costs the corridor almost nothing: measured,
-  // the glyph colliders' own push-out reaches x=-19.45, so it eats 0.55m off
-  // the corridor's 14m clear lane over the 6.2m of its length (the glyphs run
-  // along z 29.9..36.1, all at x=-21.3, since rotating by PI/2 spreads them
-  // down the corridor rather than across it). Nothing becomes unwalkable —
-  // isOnFirstFloor is unchanged there, and the whole side strip is walkable
-  // anyway. 1.3m out from the corridor edge also threads the furniture strip's
-  // own occupants — chairs and fabric pillars both sit at x=-23.2 — and the
-  // pillar uplight at z=32 happens to wash straight down over the letters.
-  addDevoxxLetters(group, firstFloorLetterColliders, {
-    x: hall.x - HALLWAY_CORRIDOR_HALF_WIDTH - 1.3,
-    y,
-    z: hallNearZ - 8,
-    rotationY: Math.PI / 2,
-  });
+  // No DEVOXX letters along this corridor: a set stood just outside the
+  // walkable edge here for one pass, and the user cut it when the prop gained
+  // its topple ("would remove the devoxx letters in the hall on the first
+  // floor"). The two that remain are the ones you can actually walk up to and
+  // knock over — Room 4's podium and the foyer above the entrance stair —
+  // rather than a third that only ever read as wallpaper you squeeze past.
 
   // Far end (Stair C, by Room 6/7): a real descending staircase down to a
   // closed-glass-door exit lobby, not a closed door prop — see
@@ -2482,12 +2624,13 @@ function createEntranceFoyer(): THREE.Group {
   group.add(doorLight);
 
   // The DEVOXX letters on the landing, facing back out over the hall — the
-  // user's own placement: "the ground floor between the small stair and the
-  // closed doors leading to the reception". Sits ~2m clear of the doors and
-  // ~2.8m past the top step, so neither the stair run nor the glass doors is
-  // crowded, and the landing is 26m wide against the wordmark's ~7.5m — the
-  // robot walks around either end rather than being funnelled.
-  addDevoxxLetters(group, groundFloorLetterColliders, {
+  // user's own placement, twice: "the ground floor between the small stair and
+  // the closed doors leading to the reception", then "in the exhibition hall
+  // above the stair". Sits ~2m clear of the doors and ~2.8m past the top step,
+  // so neither the stair run nor the glass doors is crowded, and the landing is
+  // 26m wide against the wordmark's ~7.5m — the robot walks around either end
+  // rather than being funnelled, and can walk into any glyph to knock it over.
+  addDevoxxLetters(group, 'ground', {
     x: 0,
     y,
     z: halfD + FOYER_DEPTH - 2.4,

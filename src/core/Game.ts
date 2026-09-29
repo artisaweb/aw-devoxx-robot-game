@@ -13,6 +13,8 @@ import {
   getStairEnclosureColliders,
   getLunchTableColliders,
   getDevoxxLetterColliders,
+  updateDevoxxLetters,
+  resetDevoxxLetters,
   FIRST_FLOOR_SPAWN,
   FLOOR_HEIGHT,
   Collider,
@@ -316,6 +318,13 @@ export class Game {
     this.level = 1;
     this.swagRun = new SwagRun();
     this.scene.add(this.swagRun.group);
+    // A new day, so the DEVOXX letters are standing again — both floors' sets
+    // survive a restart otherwise (neither floor group is rebuilt here), which
+    // would open the next day with whatever the last one knocked over still
+    // face-down. Deliberately not done at the Level 1->2->3 hand-offs: those
+    // are the same day, and a letter Voxxy knocked over should still be lying
+    // there when Biggy comes through at lunchtime.
+    resetDevoxxLetters();
     this.robot.reset();
     this.robot.setRobotModel('voxxy');
     this.robot.setInvincible(VOXXY_STUN_DURATION + VOXXY_POST_STUN_GRACE);
@@ -410,6 +419,10 @@ export class Game {
       // running, so spawn invincibility still starts when play does.
       this.robot.updateIdle(dt);
       this.beerTap.update(dt);
+      // No mover passed: a letter already mid-topple when the panel came up
+      // keeps falling instead of freezing at an angle, but nothing new gets
+      // knocked over while the level is frozen.
+      updateDevoxxLetters(dt, this.robot.mapMode);
     } else if (finished) {
       // Freeze in place once the level ends — walking around behind the
       // overlay read as a bug, and it's what the continue prompt is for.
@@ -444,6 +457,17 @@ export class Game {
       // Shared across levels 1 and 3 (not level 2, where sponsorBoothsGroup
       // is hidden anyway) — animates regardless of which level is active.
       this.beerTap.update(dt);
+      // The DEVOXX letters, on whichever floor the robot is actually standing
+      // on. Passing the robot's position and size is what lets a glyph topple
+      // when he runs into it — size because Biggy's push-out distance grows
+      // with him, so a fixed trigger radius would stop firing as he eats (see
+      // updateDevoxxLetters).
+      updateDevoxxLetters(dt, this.robot.mapMode, {
+        x: this.robot.position.x,
+        y: this.robot.position.y,
+        z: this.robot.position.z,
+        sizeScale: this.robot.sizeScale,
+      });
 
       if (this.level === 1) {
         const { stunned, pickedUp } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);

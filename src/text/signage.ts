@@ -9,10 +9,15 @@
 // tenants below: the real conference name, baked into Room 4's own signage —
 // its room panel and the branded AV flight case at the stage
 // (scene/ExhibitionHall.ts's buildAuditorium()). No date anywhere — same
-// reason the hallway screen carries none: a printed year goes stale. The
-// free-standing letters are not here: props/devoxxLetters.js draws those as
-// real extruded glyph outlines, not text, so there's no string to edit.
+// reason the hallway screen carries none: a printed year goes stale.
+//
+// `standingLetters` does belong here after all: props/devoxxLetters.js draws
+// real extruded glyph outlines rather than canvas text, but it picks which
+// outlines to extrude from this string, so this is still the one place the
+// word itself is written down. It only knows the glyphs # D E V O X — anything
+// else throws at build time rather than silently dropping a letter.
 export const EVENT_SIGNAGE = {
+  standingLetters: '#DEVOXX',
   wordmark: 'DEVOXX',
   crate: ['DEVOXX', 'BELGIUM'],
 };
