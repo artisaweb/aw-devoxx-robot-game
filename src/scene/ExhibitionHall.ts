@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { CinematicHallway } from './CinematicHallway';
+import { createDevoxxLetters } from '../props/devoxxLetters';
+import { EVENT_SIGNAGE } from '../text/signage';
 
 // Rough blockout proportions from the real venue's floor plan
 // (one large rectangular hall, evenly spaced structural columns, two staircases
@@ -928,6 +930,10 @@ export function createExhibitionHall(): THREE.Group {
   const hall = new THREE.Group();
   const halfW = HALL_WIDTH / 2;
   const halfD = HALL_DEPTH / 2;
+  // Cleared, not appended to — a second call would otherwise leave colliders
+  // for a set of letters no longer in any scene, same reason hallwayInstance
+  // is reassigned rather than collected.
+  groundFloorLetterColliders.length = 0;
 
   // Colors from the real venue: the exhibition floor reads bright and open
   // (white walls/columns, mid-gray carpet) under a tall black ceiling void —
@@ -1102,6 +1108,55 @@ export function getStairEnclosureColliders(): Collider[] {
     }
   }
   return colliders;
+}
+
+// The free-standing DEVOXX letters (src/props/devoxxLetters.js), placed in the
+// three spots the real set turns up over the week — the user: "the devoxx
+// letters: can be reused in the cinema room, the hallway and the ground floor
+// between the small stair and the closed doors leading to the reception". One
+// prop, three placements; each one's position/rotation lives at its own build
+// site below, and every glyph it plants registers a real collider here so the
+// set never becomes walk-through set dressing.
+//
+// DEVOXX_LETTER_HEIGHT is deliberately above the robot's own max jump
+// (JUMP_VELOCITY 7 under this game's gravity tops out around 1.36m) — nothing
+// in this file gives the letters a standable top surface, so a glyph short
+// enough to jump onto would drop the robot straight through it, the same bug
+// the hallway's tables hit ("when jumping on the table, i fall into it").
+const DEVOXX_LETTER_HEIGHT = 1.5;
+const groundFloorLetterColliders: Collider[] = [];
+const firstFloorLetterColliders: Collider[] = [];
+
+/** Real colliders for every DEVOXX glyph actually built, per floor — populated by addDevoxxLetters() at build time (never a parallel hand-kept coordinate list, same reason getHallwayPropColliders() reads the live hallway instance). */
+export function getDevoxxLetterColliders(floor: Floor): Collider[] {
+  return floor === 'ground' ? groundFloorLetterColliders : firstFloorLetterColliders;
+}
+
+/**
+ * Plants one DEVOXX wordmark, facing +z before `rotationY` turns it, and
+ * records a collider per glyph in `out`. The prop reports its glyphs' offsets
+ * along its own local x axis; rotating (x, 0) about y by θ gives
+ * (x·cosθ, −x·sinθ), which is all this needs to put them in world space.
+ */
+function addDevoxxLetters(
+  group: THREE.Group,
+  out: Collider[],
+  placement: { x: number; y: number; z: number; rotationY: number },
+): void {
+  const letters = createDevoxxLetters({ height: DEVOXX_LETTER_HEIGHT });
+  letters.object.position.set(placement.x, placement.y, placement.z);
+  letters.object.rotation.y = placement.rotationY;
+  group.add(letters.object);
+
+  const cos = Math.cos(placement.rotationY);
+  const sin = Math.sin(placement.rotationY);
+  for (const glyph of letters.letterColliders) {
+    out.push({
+      x: placement.x + glyph.x * cos,
+      z: placement.z - glyph.x * sin,
+      radius: glyph.radius,
+    });
+  }
 }
 
 // A closed double door — the only visible sign of the staircases behind the
@@ -1368,6 +1423,65 @@ function createStairScreenTexture(): THREE.CanvasTexture {
   return texture;
 }
 
+// Room 4's own identity panel, on the solid side wall straight ahead as you
+// walk in through the entrance gap — the same red backdrop with a numeral
+// bleeding off the top that the corridor's 7 closed doors already carry
+// (CinematicHallway's createRoomNumberTexture), plus the event wordmark
+// underneath it. Deliberately a second, local copy rather than an export
+// from that file: the corridor's version is a door-front prop sized and
+// cropped for a 5.5m panel seen edge-on in passing, this one is a wall
+// graphic read head-on from across the room, and the two want different
+// crops of the same idea.
+function createAuditoriumRoomPanelTexture(num: number): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 640;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#c81e2c';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f2f2f2';
+  // Oversized numeral bleeding off the top edge, same crop as the corridor
+  // panels — it reads as signage rather than as a centered poster.
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '900 620px "Arial Narrow", Arial, sans-serif';
+  ctx.fillText(String(num), canvas.width / 2, canvas.height * 0.82);
+  // Wordmark along the bottom, on its own darker band so it stays legible
+  // against the red.
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, canvas.height * 0.84, canvas.width, canvas.height * 0.16);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 86px "Arial Narrow", Arial, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(EVENT_SIGNAGE.wordmark, canvas.width / 2, canvas.height * 0.92);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+// The branded flight case parked beside the AV table at the stage's edge, per
+// room7-signage-screen-red-wall.jpg — a small, real detail of a dressed
+// conference stage rather than an invented one.
+function createCrateLabelTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 160;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#16305c';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const [top, bottom] = EVENT_SIGNAGE.crate;
+  ctx.font = '900 62px "Arial Narrow", Arial, sans-serif';
+  ctx.fillText(top, canvas.width / 2, canvas.height * 0.38);
+  ctx.font = '700 34px "Arial Narrow", Arial, sans-serif';
+  ctx.fillText(bottom, canvas.width / 2, canvas.height * 0.68);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 // A bright, daylight-ish glass-door look for the closed exit at the bottom of
 // the stairs (per hallway_110s.jpg: floor-to-ceiling glazing, dark mullions,
 // daylight and greenery beyond) — decorative only, this level doesn't need a
@@ -1581,6 +1695,7 @@ function buildAuditorium(
   group: THREE.Group,
   zone: RaisedZone,
   entranceSide: 'left' | 'right',
+  roomNumber: number,
   y: number,
   mats: AuditoriumMats,
 ): void {
@@ -1626,8 +1741,10 @@ function buildAuditorium(
   // footage rather than a flat colored box: a dark bezel frame around the
   // picture area (the real screen reads as a bright rectangle floating in a
   // near-black room, not a colored slab with visible edges), a light-truss
-  // rig hanging just above/in front of it, and the branded standing letters
-  // at the stage front the footage shows in front of every real screen shot.
+  // rig hanging just above/in front of it, and (below, once the stage's own
+  // front edge is known) the branded standing letters the footage shows in
+  // front of every real screen shot — that last part was described here
+  // before it was ever built, and is only actually true as of this pass.
   const stageDepth = 3;
   const stage = new THREE.Mesh(new THREE.BoxGeometry(roomHalfW * 1.4, 0.4, stageDepth), mats.stageMat);
   stage.position.set(zone.x, y + 0.2, zone.z - roomHalfD + stageDepth / 2 + 0.5);
@@ -1662,6 +1779,80 @@ function buildAuditorium(
     strut.position.set(zone.x - screenWidth / 2 + (screenWidth * i) / trussStruts, trussY, trussZ);
     group.add(strut);
   }
+
+  // The DEVOXX letters (see addDevoxxLetters) facing the seats — the third of
+  // the three spots the same set gets reused in. Standing on the apron floor
+  // right in front of the stage rather than up on its deck: the stage slab
+  // itself has no collider (it's scenery behind where the level is actually
+  // played), so letters on top of it would be the one arrangement that reads
+  // wrong in motion — a robot walking clean through the stage but bouncing
+  // off lettering apparently floating 40cm above its own feet. On the floor,
+  // the collision and the picture agree, and at gameplay camera distance it's
+  // the same silhouette keynote_hi_3s.jpg shows.
+  addDevoxxLetters(group, firstFloorLetterColliders, {
+    x: zone.x,
+    y,
+    z: stage.position.z + stageDepth / 2 + 0.4,
+    rotationY: 0,
+  });
+
+  // Warm wash across the letters and the stage front, from just in front of
+  // them. The scene's own ambient already makes them legible — this is for
+  // the raked, spotlit look the reference frames have, not for legibility.
+  const stageTopY = y + 0.4; // the stage box's own top face (0.4 tall, centered at y+0.2)
+  for (const offsetX of [-3, 3]) {
+    const wash = new THREE.PointLight(0xfff1dc, 3, 9, 1.5);
+    wash.position.set(zone.x + offsetX, y + 2, stage.position.z + stageDepth / 2 + 1.6);
+    group.add(wash);
+  }
+
+  // AV table and the branded flight case beside it at the stage's edge, per
+  // room7-signage-screen-red-wall.jpg — the speaker's own kit, left of the
+  // letters so it never sits in front of them.
+  const crateGroup = new THREE.Group();
+  const clothMat = new THREE.MeshStandardMaterial({ color: 0x1b2a4a, roughness: 0.95 });
+  const avTable = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.75, 0.8), clothMat);
+  avTable.position.set(zone.x - roomHalfW * 0.42, stageTopY + 0.375, zone.z - roomHalfD + stageDepth - 0.4);
+  crateGroup.add(avTable);
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x16305c, roughness: 0.8 });
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.75), crateMat);
+  const crateX = zone.x - roomHalfW * 0.42 - 1.5;
+  const crateZ = zone.z - roomHalfD + stageDepth - 0.4;
+  crate.position.set(crateX, stageTopY + 0.35, crateZ);
+  crateGroup.add(crate);
+  // Unlit label plane on the crate's audience-facing side — same
+  // guaranteed-legible treatment the room-number signs and glass doors use.
+  const crateLabelMat = new THREE.MeshBasicMaterial({ map: createCrateLabelTexture() });
+  const crateLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.41), crateLabelMat);
+  crateLabel.position.set(crateX, stageTopY + 0.38, crateZ + 0.38);
+  crateGroup.add(crateLabel);
+  group.add(crateGroup);
+
+  // Room identity panel on the solid side wall, straight ahead as you come
+  // through the entrance gap (which sits on the opposite wall at
+  // entranceCenterZ) — the first thing the room tells you about itself, and
+  // the same red-backdrop-with-a-bleeding-numeral language the corridor's own
+  // door signage already speaks. Emissive for the same reason that signage
+  // is: a plain lit material reads as flat black in a blacked-out cinema.
+  const roomPanelTexture = createAuditoriumRoomPanelTexture(roomNumber);
+  const roomPanelMat = new THREE.MeshStandardMaterial({
+    map: roomPanelTexture,
+    emissive: 0xffffff,
+    emissiveMap: roomPanelTexture,
+    emissiveIntensity: 0.5,
+    roughness: 0.9,
+  });
+  const roomPanelWidth = 6;
+  const roomPanel = new THREE.Mesh(new THREE.PlaneGeometry(roomPanelWidth, roomPanelWidth * 1.25), roomPanelMat);
+  // 0.3 clear of the wall box's own face (0.5 thick, centered on solidX), the
+  // same margin the corridor's panels use to avoid sinking into their wall.
+  const panelInward = entranceSide === 'left' ? -1 : 1;
+  roomPanel.position.set(solidX + panelInward * 0.3, y + 4.6, entranceCenterZ);
+  roomPanel.rotation.y = (panelInward * Math.PI) / 2;
+  group.add(roomPanel);
+  const roomPanelLight = new THREE.PointLight(0xff3344, 2, 12);
+  roomPanelLight.position.set(solidX + panelInward * 2, y + 4.6, entranceCenterZ);
+  group.add(roomPanelLight);
 
   // Real per-row stadium seating: every single row gets its own riser (see
   // ROW_RISE's own comment) — no grouping into flat multi-row plateaus. Seat
@@ -1824,6 +2015,7 @@ export function createFirstFloor(): THREE.Group {
   const hall = HALL_ZONE;
   const room4 = ROOM4_ZONE;
   const y = FLOOR_HEIGHT;
+  firstFloorLetterColliders.length = 0; // see createExhibitionHall's own reset
   const hallWallHeight = 6; // end-caps only — CinematicHallway's own side walls use HALLWAY_CEILING_HEIGHT-derived scale
 
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x2e2b33 });
@@ -1910,6 +2102,29 @@ export function createFirstFloor(): THREE.Group {
   group.add(unusedCeiling);
   group.add(createLaserBarrier(hall.x, y, hallNearZ - MOVER_CLEARANCE, hall.halfW));
 
+  // The DEVOXX letters again (see addDevoxxLetters), a short walk in from
+  // where Stairs A/B drop you — the first thing Droid sees on arriving, and
+  // the hallway's only real landmark between the laser barrier and Room 3's
+  // signage.
+  //
+  // Turned to face the corridor (+x) and standing just *outside* its walkable
+  // edge rather than across it: at ~7.5m wide the wordmark would otherwise be
+  // a solid wall across the middle of a 14m corridor, and Level 2's whole
+  // hazard design is six attendees chasing straight down that corridor with
+  // turn-rate-limited steering and no pathfinding — the same shape that made
+  // the wide lunch tables an unbeatable hiding spot downstairs (see
+  // LUNCH_TABLE_ZONES). Here it costs the corridor nothing: the glyph
+  // colliders' own push-out reaches x=-19.5, still clear of the walkable
+  // limit. 1.3m out from the corridor edge also threads the furniture strip's
+  // own occupants — chairs and fabric pillars both sit at x=-23.2 — and the
+  // pillar uplight at z=32 happens to wash straight down over the letters.
+  addDevoxxLetters(group, firstFloorLetterColliders, {
+    x: hall.x - HALLWAY_CORRIDOR_HALF_WIDTH - 1.3,
+    y,
+    z: hallNearZ - 8,
+    rotationY: Math.PI / 2,
+  });
+
   // Far end (Stair C, by Room 6/7): a real descending staircase down to a
   // closed-glass-door exit lobby, not a closed door prop — see
   // buildStairsAndScreen's own comment for why (the user: "at the end of the
@@ -1918,7 +2133,10 @@ export function createFirstFloor(): THREE.Group {
 
   // Room 4 — the one real, big, walkable auditorium (see the DECIDED note by
   // ROOM4_ZONE above). Entrance faces the hall, on Room 4's right/east side.
-  buildAuditorium(group, room4, 'right', y, auditoriumMats);
+  // Room number 4 matches CinematicHallway's own roomNumberForSlot() for this
+  // slot (left side, 2nd door: 3 + 1) — the corridor's signage and the room's
+  // own have to agree about which room you just walked into.
+  buildAuditorium(group, room4, 'right', 4, y, auditoriumMats);
 
   return group;
 }
@@ -2020,6 +2238,19 @@ function createEntranceFoyer(): THREE.Group {
   const doorLight = new THREE.PointLight(0xdfeaff, 3, 12, 1);
   doorLight.position.set(0, doorCenterY, doorZ + 1.5);
   group.add(doorLight);
+
+  // The DEVOXX letters on the landing, facing back out over the hall — the
+  // user's own placement: "the ground floor between the small stair and the
+  // closed doors leading to the reception". Sits ~2m clear of the doors and
+  // ~2.8m past the top step, so neither the stair run nor the glass doors is
+  // crowded, and the landing is 26m wide against the wordmark's ~7.5m — the
+  // robot walks around either end rather than being funnelled.
+  addDevoxxLetters(group, groundFloorLetterColliders, {
+    x: 0,
+    y,
+    z: halfD + FOYER_DEPTH - 2.4,
+    rotationY: Math.PI,
+  });
 
   return group;
 }

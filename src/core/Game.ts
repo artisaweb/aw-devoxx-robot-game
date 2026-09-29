@@ -11,6 +11,7 @@ import {
   getGroundFloorHeightAt,
   getStairEnclosureColliders,
   getLunchTableColliders,
+  getDevoxxLetterColliders,
   FIRST_FLOOR_SPAWN,
   FLOOR_HEIGHT,
   Collider,
@@ -93,6 +94,12 @@ export class Game {
     // can be used to escape the npcs?" Height-gated like the booth desks
     // (getLunchTableColliders), so hazards (who can't jump) can't follow.
     ...getLunchTableColliders(),
+    // The foyer's DEVOXX letters — solid extruded glyphs standing taller than
+    // the robot can jump, so they're real obstacles, not set dressing. Read
+    // from the live list createExhibitionHall() filled rather than a second
+    // hand-kept copy of their coordinates; safe to spread here because the
+    // groundFloorGroup field above is initialized first.
+    ...getDevoxxLetterColliders('ground'),
     { x: COFFEE_MACHINE_POS[0], z: COFFEE_MACHINE_POS[1], radius: KIOSK_COLLIDER_RADIUS },
     { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], radius: KIOSK_COLLIDER_RADIUS },
   ];
@@ -109,6 +116,11 @@ export class Game {
     ...OBSTACLE_DEFS.map((def) => ({ x: def.pos[0], z: def.pos[1], radius: def.radius })),
     ...getAuditoriumRowWallColliders(),
     ...getHallwayPropColliders(),
+    // Both first-floor sets (corridor + Room 4's stage apron). Deliberately
+    // not `robotOnly`: unlike the row walls, these are solid objects the
+    // attendees should route around too, so they stay in
+    // firstFloorHazardColliders below.
+    ...getDevoxxLetterColliders('first'),
   ];
   private firstFloorHazardColliders: Collider[] = this.firstFloorColliders.filter((c) => !c.robotOnly);
   // Same ground floor as Level 1 (columns + booths), plus KING's candy
@@ -121,6 +133,7 @@ export class Game {
     ...getBoothPlatformColliders(),
     ...getStairEnclosureColliders(),
     ...getLunchTableColliders(),
+    ...getDevoxxLetterColliders('ground'), // same foyer letters as Level 1 — same ground floor, redressed
     { x: JAVA_MACHINE_POS[0], z: JAVA_MACHINE_POS[1], radius: KIOSK_COLLIDER_RADIUS },
     { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], radius: KIOSK_COLLIDER_RADIUS },
   ];
