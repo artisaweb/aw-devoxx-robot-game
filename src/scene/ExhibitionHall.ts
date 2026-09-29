@@ -180,6 +180,72 @@ const ROOM4_ZONE: RaisedZone = {
 // below rather than special-cased, in case a second real auditorium is ever
 // added back deliberately.
 const AUDITORIUM_ZONES: RaisedZone[] = [ROOM4_ZONE];
+
+// The stage/podium at the front of an auditorium. Its numbers live here, not
+// inside buildAuditorium, because the collision and height functions below
+// have to agree with the mesh exactly — the same "one source for geometry and
+// collision" rule every other raised surface in this file follows.
+//
+// It used to be pure scenery: no collider, no height entry. You could walk
+// straight through it and, if you jumped, straight down through its top (the
+// user: "in the past, i felt through it, i could walk, but not on top of
+// it"). Now it's a real platform — STAGE_HEIGHT is above Robot.ts's
+// AUTO_STEP_HEIGHT (0.3), so it can't be strolled onto, and well under the
+// ~1.36m jump, so one jump puts you up there.
+const STAGE_HEIGHT = 0.4;
+const STAGE_DEPTH = 3;
+/** The mesh's own footprint, shared by buildAuditorium and the collider/height functions. */
+function auditoriumStage(zone: RaisedZone): { x: number; z: number; halfW: number; halfD: number; topY: number } {
+  return {
+    x: zone.x,
+    z: zone.z - zone.halfD + STAGE_DEPTH / 2 + 0.5,
+    halfW: zone.halfW * 0.7, // the mesh is roomHalfW * 1.4 wide
+    halfD: STAGE_DEPTH / 2,
+    topY: zone.height + STAGE_HEIGHT,
+  };
+}
+
+/**
+ * Height-gated colliders for every auditorium stage — blocks walking onto it
+ * at floor level (so it has to be jumped) without fighting the robot once
+ * it's standing up there, exactly like the lunch tables downstairs.
+ *
+ * Spaced as several circles along the long axis rather than one big circle,
+ * for the same reason getLunchTableColliders does it: a single diagonal
+ * radius around a 28x3 slab would block a huge disk of open apron.
+ *
+ * Level 2's attendees ignore Collider.height entirely (see KnowledgeRun's own
+ * collider loop), so they are blocked by this at every height and cannot
+ * follow the player up — the podium is a real refuge, the same way the lunch
+ * tables are in Level 3.
+ */
+export function getAuditoriumStageColliders(): Collider[] {
+  const colliders: Collider[] = [];
+  for (const zone of AUDITORIUM_ZONES) {
+    const stage = auditoriumStage(zone);
+    const spacing = stage.halfD * 1.5;
+    const count = Math.max(2, Math.ceil((stage.halfW * 2) / spacing) + 1);
+    for (let i = 0; i < count; i++) {
+      const t = i / (count - 1);
+      colliders.push({
+        x: stage.x - stage.halfW + t * stage.halfW * 2,
+        z: stage.z,
+        radius: stage.halfD,
+        height: stage.topY,
+      });
+    }
+  }
+  return colliders;
+}
+
+/** The stage's own top surface, when standing over one — checked before the seating rows, which would otherwise claim this same patch of floor as flat apron. */
+function auditoriumStageSurfaceHeightAt(x: number, z: number): number | undefined {
+  for (const zone of AUDITORIUM_ZONES) {
+    const stage = auditoriumStage(zone);
+    if (Math.abs(x - stage.x) <= stage.halfW && Math.abs(z - stage.z) <= stage.halfD) return stage.topY;
+  }
+  return undefined;
+}
 // Named export for consumers that need the one real auditorium's full-size
 // zone (e.g. KnowledgeRun scattering pickups/hazards across it) — safer
 // than positionally destructuring FIRST_FLOOR_ZONES, which silently breaks
@@ -964,6 +1030,10 @@ export function getGroundFloorHeightAt(x: number, z: number): number {
  * else 0 (the void below).
  */
 export function getFirstFloorHeightAt(x: number, z: number): number {
+  // Before the rows: the stage sits inside the apron, which auditoriumRowHeightAt
+  // would otherwise report as flat floor, dropping anyone standing on it.
+  const stageHeight = auditoriumStageSurfaceHeightAt(x, z);
+  if (stageHeight !== undefined) return stageHeight;
   for (const zone of AUDITORIUM_ZONES) {
     const rowHeight = auditoriumRowHeightAt(zone, x, z);
     if (rowHeight !== undefined) return rowHeight;
@@ -1886,9 +1956,10 @@ function buildAuditorium(
   // front edge is known) the branded standing letters the footage shows in
   // front of every real screen shot — that last part was described here
   // before it was ever built, and is only actually true as of this pass.
-  const stageDepth = 3;
-  const stage = new THREE.Mesh(new THREE.BoxGeometry(roomHalfW * 1.4, 0.4, stageDepth), mats.stageMat);
-  stage.position.set(zone.x, y + 0.2, zone.z - roomHalfD + stageDepth / 2 + 0.5);
+  const stageDepth = STAGE_DEPTH;
+  const stageSpec = auditoriumStage(zone);
+  const stage = new THREE.Mesh(new THREE.BoxGeometry(stageSpec.halfW * 2, STAGE_HEIGHT, stageDepth), mats.stageMat);
+  stage.position.set(stageSpec.x, y + STAGE_HEIGHT / 2, stageSpec.z);
   group.add(stage);
 
   const screenWidth = roomHalfW * 1.5;
