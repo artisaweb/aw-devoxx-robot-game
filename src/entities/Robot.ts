@@ -95,6 +95,33 @@ const MIN_LOAD_FACTOR = 0.5; // never slower than half speed, however loaded
 // Droid never call grow(), so sizeScale stays 1 and none of this applies to
 // them.
 const MAX_SIZE_SCALE = 2.6; // clamp so a very long endless run doesn't grow Biggy into something unplayable
+
+// Biggy's teeter — a side-to-side body roll that grows with him (the user:
+// "level 3 wobbling of Biggy robot: maybe we are missing an extra effect on
+// this robot? the wiggling effect? to make it even more clear? Biggy barely
+// standing, almost tipping over but surviving for now?").
+//
+// Deliberately a separate effect from TIPSY_WOBBLE_AMPLITUDE above, not a
+// reuse of it: tipsy swings the direction Biggy actually *travels*, a control
+// penalty the player fights. This one is purely visual body roll on
+// bodyGroup.rotation.z, nothing to do with steering — it's the top-heavy
+// silhouette reading as barely-balanced. rotation.x is spoken for by the
+// topple/fall tilt, hence z.
+//
+// Amplitude is zero at growthScale 1 and reaches TEETER_MAX_AMPLITUDE at
+// MAX_SIZE_SCALE, so Voxxy and Droid (who never call grow()) are untouched
+// and a fresh Biggy starts steady — the wobble is the visible half of the
+// growth penalty that colliderReach() and the speed taper already apply.
+const TEETER_MAX_AMPLITUDE = 0.17; // radians (~10°) of roll at full size
+// Two out-of-phase components rather than one clean sine: a single sine reads
+// as a metronome, a machine doing it on purpose. The slow one is the weight
+// shifting, the fast smaller one the correction that keeps him up.
+const TEETER_SLOW_RATE = 2.4; // radians/second
+const TEETER_FAST_RATE = 5.9; // deliberately not a multiple of the slow rate, so the two never re-sync into a repeating beat
+const TEETER_FAST_SHARE = 0.35; // how much of the amplitude the fast component takes
+// Walking shifts more weight than standing does, but a standing Biggy still
+// sways — "barely standing", not "steady until he moves".
+const TEETER_MOVING_BOOST = 0.45;
 // meters/second^2 at size 1 — fast enough that Voxxy/Droid never perceive it
 // (full speed reached in well under a frame's worth of visible ramp-up).
 // Dividing this by sizeScale as Biggy grows is what makes him "accelerate and
@@ -249,6 +276,9 @@ export class Robot {
   // loads), never a replacement for it. currentSpeed is the momentum-lite
   // easing value the movement code below chases a target speed with.
   private growthScale = 1;
+  // Advances every frame so the teeter keeps its continuity; the amplitude it
+  // gets multiplied by is what actually gates it to a grown Biggy.
+  private teeterPhase = Math.random() * Math.PI * 2;
   // Counts down from GROWTH_PULSE_DURATION after each grow() — see
   // applyBodyScale()'s squash-pop overshoot and update()'s decay tick.
   private growPulseTimer = 0;
@@ -837,6 +867,7 @@ export class Robot {
     this.invincibleTimer = 0;
     this.tipsyTimer = 0;
     this.bodyGroup.rotation.x = 0;
+    this.bodyGroup.rotation.z = 0; // clear any leftover teeter roll along with the topple tilt
     this.growthScale = 1;
     this.applyBodyScale();
   }
@@ -1011,6 +1042,24 @@ export class Robot {
       } else {
         this.bodyGroup.rotation.x = 0;
       }
+    }
+
+    // Biggy's teeter (see TEETER_MAX_AMPLITUDE). Applied after the topple
+    // block on purpose: that one owns rotation.x, this one rotation.z, so a
+    // toppled robot keeps its face-plant tilt while this stays at 0 for it.
+    // Suppressed entirely while down — a robot lying on the floor rolling
+    // side to side reads as a glitch, not as weight.
+    this.teeterPhase += dt;
+    const growthFraction = (this.growthScale - 1) / (MAX_SIZE_SCALE - 1);
+    if (growthFraction > 0 && !this.fallen && this.toppleDownTimer <= 0 && this.toppleRiseTimer <= 0) {
+      const movingFraction = Math.min(1, this.currentSpeed / MOVE_SPEED);
+      const amplitude =
+        TEETER_MAX_AMPLITUDE * growthFraction * (1 + TEETER_MOVING_BOOST * movingFraction);
+      const slow = Math.sin(this.teeterPhase * TEETER_SLOW_RATE) * (1 - TEETER_FAST_SHARE);
+      const fast = Math.sin(this.teeterPhase * TEETER_FAST_RATE) * TEETER_FAST_SHARE;
+      this.bodyGroup.rotation.z = (slow + fast) * amplitude;
+    } else {
+      this.bodyGroup.rotation.z = 0;
     }
 
     const stunTint = this.isStunned ? new THREE.Color(STUN_COLOR) : null;
