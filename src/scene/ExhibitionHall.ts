@@ -107,18 +107,6 @@ export interface RaisedZone {
 // like two distinct maps joined by a door.
 export type Floor = 'ground' | 'first';
 
-export interface DoorLink {
-  ax: number;
-  az: number;
-  ay: number;
-  aHeading: number; // facing direction after arriving at A (from B)
-  bx: number;
-  bz: number;
-  by: number;
-  bHeading: number; // facing direction after arriving at B (from A)
-  radius: number;
-}
-
 export const FLOOR_HEIGHT = 4.5; // first floor's story height
 // -13, not the tidier -10 — that's exactly a column gridline (COLUMN_SPACING=10,
 // gridlines at 0/±10/±20) and a column sits at (x=-10, z=-10) between the door
@@ -205,12 +193,10 @@ export { HALL_ZONE as FIRST_FLOOR_HALL_ZONE, ROOM4_ZONE as FIRST_FLOOR_ROOM4_ZON
 // hall with connections to the room and extra assets.html`, whose stairs
 // used an 0.5 rise — too steep here: Robot.ts's AUTO_STEP_HEIGHT is 0.3, and
 // anything steeper is a real ledge (falls, or needs a jump), which a
-// walking staircase shouldn't be). `DOOR_LINKS`'s "Stair C" teleport is dead
-// code (nothing calls findDoorTeleport) — confirmed before building this, since
-// that finding decided whether this could be background scenery behind a
-// teleport trigger or had to be genuinely walkable. It's the latter: nothing
-// stops a player from walking straight up to this end, so it has to hold up
-// as real geometry, not just look right from a distance.
+// walking staircase shouldn't be). Nothing teleports the player between
+// floors — the levels advance on their own (Game.ts's advanceToLevelX) — and
+// nothing stops a player walking straight up to this end, so this has to hold
+// up as real geometry underfoot, not just look right from a distance.
 // Strictly *under* AUTO_STEP_HEIGHT (0.3), not equal to it — verified live
 // that exactly 0.3 isn't actually safe: floating-point noise from repeated
 // `FLOOR_HEIGHT - n * STAIR_RISE` subtraction occasionally nudges a step's
@@ -267,11 +253,11 @@ const HALL_STAIR_BRIDGE: RaisedZone = {
 // on level 2."
 //
 // Placeholders in the sense that matters for gameplay: they descend one real
-// flight and stop at a closed door, and there is deliberately no DOOR_LINKS
-// entry for either (the user: "these stairs end in the closed two rooms on
-// the ground floor (just placeholder, not real link between the two
-// floors)"). Note that's also true of Stair C, whose own DOOR_LINKS teleport
-// is dead code — so "no teleport" is the house pattern here, not an exception.
+// flight and stop at a closed door, with nothing linking them to the ground
+// floor (the user: "these stairs end in the closed two rooms on the ground
+// floor (just placeholder, not real link between the two floors)"). That's
+// true of every stair in this game — Stair C included — so it's the house
+// pattern here, not an exception.
 //
 // Real walkable geometry all the same, for exactly the reason Stair C is:
 // nothing stops the player walking up to a visible opening, so it has to hold
@@ -739,62 +725,6 @@ export const FIRST_FLOOR_SPAWN = {
   heading: Math.PI,
 };
 
-export const DOOR_LINKS: DoorLink[] = [
-  // Stairs A/B: a single door on the ground floor's back wall (in reality
-  // both staircases are behind it) linking to the first-floor hall.
-  {
-    ax: FIRST_FLOOR_CENTER_X,
-    az: -HALL_DEPTH / 2 + 1.2,
-    ay: 0,
-    aHeading: 0,
-    bx: FIRST_FLOOR_SPAWN.x,
-    bz: FIRST_FLOOR_SPAWN.z,
-    by: FLOOR_HEIGHT,
-    bHeading: FIRST_FLOOR_SPAWN.heading,
-    radius: 1.6,
-  },
-  // Stair C: a door inside the foyer, near Reception, linking to the far end
-  // of the same hall — the plan shows a second "ground floor" stair
-  // connection there too.
-  {
-    ax: 3,
-    az: HALL_DEPTH / 2 + FOYER_DEPTH - 1.2,
-    ay: FOYER_FLOOR_Y,
-    aHeading: Math.PI,
-    bx: FIRST_FLOOR_CENTER_X,
-    bz: HALL_ZONE.z - HALL_ZONE.halfD + 3,
-    by: FLOOR_HEIGHT,
-    bHeading: 0, // face back toward the hall's near end, not into the far wall
-    radius: 1.4,
-  },
-];
-
-/**
- * Within radius of a door's A or B side — returns where stepping through
- * lands, including which floor's own coordinate space that destination
- * belongs to. Every DOOR_LINKS entry has A on the ground floor and B on the
- * first floor (never both on the same floor), so that's all this needs to
- * know to report the floor unambiguously.
- */
-export function findDoorTeleport(
-  x: number,
-  z: number,
-): { x: number; z: number; y: number; heading: number; floor: Floor } | undefined {
-  for (const link of DOOR_LINKS) {
-    const dxa = x - link.ax;
-    const dza = z - link.az;
-    if (dxa * dxa + dza * dza <= link.radius * link.radius) {
-      return { x: link.bx, z: link.bz, y: link.by, heading: link.bHeading, floor: 'first' };
-    }
-    const dxb = x - link.bx;
-    const dzb = z - link.bz;
-    if (dxb * dxb + dzb * dzb <= link.radius * link.radius) {
-      return { x: link.ax, z: link.az, y: link.ay, heading: link.aHeading, floor: 'ground' };
-    }
-  }
-  return undefined;
-}
-
 function findFirstFloorZone(x: number, z: number): RaisedZone | undefined {
   return FIRST_FLOOR_ZONES.find(
     (zone) => Math.abs(x - zone.x) <= zone.halfW && Math.abs(z - zone.z) <= zone.halfD,
@@ -1072,7 +1002,7 @@ export function createExhibitionHall(): THREE.Group {
   const frontSegmentWidth = (HALL_WIDTH - DOORWAY_WIDTH) / 2;
   const wallDefs = [
     // Back wall: solid — the stairs behind it are a closed door (see
-    // DOOR_LINKS), not a walk-through gap.
+    // above), not a walk-through gap.
     { w: HALL_WIDTH, d: wallThickness, x: 0, z: -halfD },
     // front wall, split either side of the (full-width) entrance opening
     { w: frontSegmentWidth, d: wallThickness, x: -(DOORWAY_WIDTH / 2 + frontSegmentWidth / 2), z: halfD },
@@ -1282,8 +1212,8 @@ function addDevoxxLetters(
 }
 
 // A closed double door — the only visible sign of the staircases behind the
-// wall. Reused for every DOOR_LINKS mounting point (ground floor, foyer, and
-// both first-floor arrival walls) so they read as the same kind of thing.
+// wall. Reused at every stairwell mounting point (the ground-floor enclosures
+// and both mid-corridor flights) so they read as the same kind of thing.
 function createStairDoorMesh(centerX: number, baseY: number, z: number): THREE.Group {
   const group = new THREE.Group();
   const frameMat = new THREE.MeshStandardMaterial({ color: 0x2a2822 });
@@ -2215,7 +2145,7 @@ function buildAuditorium(
 // (3, 6, 7, 9, 8, 10) as closed-door props along the hall's side walls. The
 // hall *is* the corridor/landing space — there's no separate lobby. Geometry
 // mirrors FIRST_FLOOR_ZONES exactly so the walkable footprint and what you
-// see always agree. Arrived at only via DOOR_LINKS, so both entry walls
+// see always agree. Both entry walls
 // carry their own closed door too — walking back up to one teleports you
 // back down.
 export function createFirstFloor(): THREE.Group {
