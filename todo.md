@@ -75,6 +75,22 @@ fallen robot, a toppled one, and any robot that never grew all read exactly 0 �
 so Voxxy and Droid are genuinely untouched. What's still unverified is only
 whether ~14° *looks* right.
 
+## A pre-existing bug I found but did NOT fix
+
+**Three of Level 2's ten attendees spawn outside the map.** `HAZARD_START` in
+`KnowledgeRun.ts` seeds one hazard per auditorium, but only Room 4 was ever
+built — the other three entries are labelled "Room 9", "Room 5's door slot" and
+"Room 8's door slot" for rooms that don't exist. Their positions `(6, -24)`,
+`(-28, -54)` and `(6, -54)` are outside every walkable zone, so
+`getFirstFloorHeightAt` returns 0 and they sit in the void below the floor.
+
+Verified this predates everything in this pass: identical before and after my
+changes. In practice Level 2 has been running with 7 working hazards, not 10.
+
+I left it alone because fixing it changes the level's difficulty by ~40%, which
+is your call, not mine. The fix is small — move those three onto the corridor,
+or drop them and reword the comment. Say which and I'll do it.
+
 ## Things I decided for you
 
 You were away, so I assumed rather than asked. Each of these is the reversible kind of call — if
@@ -136,6 +152,10 @@ geometry, not enough to play anything. Everything below is therefore built and r
       whether diners visibly walk sensible routes, still needs eyes.
 - [ ] **Hunger pacing (task 5).** 39s from full to empty if you never eat. Pure feel, and the
       number I'd most expect you to want changed.
+- [ ] **That attendees no longer using the stairwells is what you want.** Making the stairs
+      walkable also made them walkable for hazards, and one run in six lost a hazard down one
+      permanently. They're now excluded (`395b140`). If you'd rather see attendees heading down
+      the stairs as scenery, that's doable — it just needs them to come back up.
 - [ ] **How the two new staircases look.** Their *geometry* I did verify, by standing on them and
       reading back the height the game gives: 1m in → 4.25, 2m → 4.00, 6m → 3.00, 8m → 2.75, and
       1.50 on the landing, on both flights, all exactly matching the step formula. But I never got
