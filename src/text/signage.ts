@@ -5,6 +5,18 @@
 // as a real complaint about a real sponsor. Re-check every pass
 // "industry-wide humor" can still land as a genuine complaint about that specific sponsor.
 
+// The event's own branding, as opposed to SPONSOR_SIGNAGE's fictional booth
+// tenants below: the real conference name, baked into Room 4's own signage —
+// its room panel and the branded AV flight case at the stage
+// (scene/ExhibitionHall.ts's buildAuditorium()). No date anywhere — same
+// reason the hallway screen carries none: a printed year goes stale. The
+// free-standing letters are not here: props/devoxxLetters.js draws those as
+// real extruded glyph outlines, not text, so there's no string to edit.
+export const EVENT_SIGNAGE = {
+  wordmark: 'DEVOXX',
+  crate: ['DEVOXX', 'BELGIUM'],
+};
+
 export const SPONSOR_SIGNAGE = {
   rocketMind: { name: 'RocketMind', tagline: 'The IDE of 2040' },
   miracleSystems: { name: 'MIRACLE SYSTEMS', tagline: 'ENGINEERED FOR EXTREME PERFORMANCE' },
