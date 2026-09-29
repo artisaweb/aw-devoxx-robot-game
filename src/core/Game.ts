@@ -15,6 +15,7 @@ import {
   getDevoxxLetterColliders,
   updateDevoxxLetters,
   resetDevoxxLetters,
+  getSideStairRailingColliders,
   getChargingDockColliders,
   getChargingDockMarkers,
   updateChargingDocks,
@@ -131,6 +132,11 @@ export class Game {
     // firstFloorHazardColliders below.
     ...getDevoxxLetterColliders('first'),
     ...getChargingDockColliders('first'),
+    // The balustrades around both mid-corridor stairwells. These are the only
+    // thing keeping anyone out of a 3m trench in the corridor floor now that
+    // the flights drop into the hall itself rather than through its side walls
+    // — see getSideStairRailingColliders.
+    ...getSideStairRailingColliders(),
     // Room 4's stage, height-gated at its own top face (see
     // getAuditoriumStageColliders) — without this the stage has a walkable
     // top surface but nothing stopping you walking into it, and
