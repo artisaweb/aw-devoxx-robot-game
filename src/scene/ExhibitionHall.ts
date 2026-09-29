@@ -820,12 +820,26 @@ export const FIRST_FLOOR_CLAMP_X_MAX = firstFloorBounds.xMax;
 export const FIRST_FLOOR_CLAMP_Z_MIN = firstFloorBounds.zMin;
 export const FIRST_FLOOR_CLAMP_Z_MAX = firstFloorBounds.zMax;
 
-// Where a robot arriving via Stairs A/B lands — 3m in from the hall's near
+// Where a robot arriving via Stairs A/B lands — in from the hall's near
 // (entrance) wall, derived from HALL_ZONE rather than a hardcoded literal so
 // a future resize of the hall can't strand this spawn outside every zone.
+//
+// The 3m this used to be was enough for the robot but not for the *camera*:
+// FollowCamera chases from 8m back, and at 3m that spot fell outside the near
+// wall entirely, so its occlusion raycast hit the laser barrier standing at
+// the near limit and pulled the shot in to MIN_CAMERA_DIST. Level 2 opened on
+// a close-up of the back of Droid's head crossed by laser beams — you could
+// see the barrier behind him and nothing of the corridor he's actually facing
+// (the user: "droid starts faced towards the end of the map (the lasers),
+// this is not logic"). His *heading* was never wrong: π faces -z, down the
+// corridor toward the rooms and away from the barrier. Only the framing was.
+//
+// Deliberately not imported from FollowCamera.ts: that module already imports
+// this one, and a cycle would evaluate this spawn before the constant exists.
+const CAMERA_CHASE_CLEARANCE = 12; // > FollowCamera's OFFSET.z (8) + WALL_MARGIN (1.5)
 export const FIRST_FLOOR_SPAWN = {
   x: FIRST_FLOOR_CENTER_X,
-  z: HALL_ZONE.z + HALL_ZONE.halfD - 3,
+  z: HALL_ZONE.z + HALL_ZONE.halfD - CAMERA_CHASE_CLEARANCE,
   heading: Math.PI,
 };
 
