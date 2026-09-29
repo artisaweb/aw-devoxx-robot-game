@@ -14,7 +14,51 @@ d4e5620  Add the two mid-corridor staircases to Level 2              (task 8)
 27363b9  Split sponsorBooths.ts into one module per booth            (task 10)
 a324712  Fix ?level=3 debug placement dropping the robot on the first floor (found on the way)
 5ce87c4  Rewrite the README with screenshots and real detail          (task 9)
+d774540  Add todo.md with this pass's assumptions and what needs review
+c803329  Make Level 3's diner steering actually reach the outer tables (fixes 287951a — see "What testing found")
 ```
+
+## What testing found
+
+Chrome refused to run the game (its window is hidden, which suspends the
+animation loop), so I built a headless harness instead: esbuild bundles the real
+`LunchRush` / `KnowledgeRun` for Node against a small DOM stub, and the real
+update loop runs at a fixed 60Hz with a stubbed Robot. That found two things I
+would otherwise have handed you broken.
+
+**The diner fix (`287951a`) only half worked, and I had to fix it again
+(`c803329`).** Simulating 600s and counting which table each sandwich came from:
+
+| | sandwiches taken | from the outer tables | diners left stranded |
+| --- | --- | --- | --- |
+| before this pass | 117 | 0 (0%) | 0 |
+| after `287951a` | 29 | 0 (0%) | 4, stuck up to 579s |
+| after `c803329` | 70 | 20 (28.6%) | 0 |
+
+The middle row is the one that matters: my first attempt made things *worse*.
+Diners pinned themselves against the Stairs A enclosure — local avoidance
+oscillates against a wall, because every wall here is a row of circles and
+rounding one presents the next — and because a claimed sandwich stayed reserved
+until the diner arrived, four of the fourteen attendees spent the whole run
+holding outer-table sandwiches hostage. Committing to one side of a detour for
+its duration turns the same rule into wall-following, and timeouts on both the
+grab trip and the wander leg stop a failed trip from lasting forever.
+
+The 117 in the first row is not a target to beat: those came from diners grabbing
+from where they stood in the queue without walking anywhere, which is the
+behaviour you asked me to fix.
+
+**The hunger numbers in my commit message were wrong**, and the comment in
+`LunchRush.ts` is now corrected (the correction rode along in `c803329`). The
+drain *ramps* while you survive, so the constants are base rates, not
+times-to-starve. Measured on a run that never eats: the old tuning emptied the
+bar in **61s** (not 85s), the new one empties it in **39s** (not 50s), with the
+low warning at 31s. 39s is aggressive — this is the number most worth a second
+opinion once you can play it.
+
+I also checked all 12 Level 2 nuggets are on walkable floor and not inside any
+obstacle, and that the Room 4 ones still sit at the intended climb: 4.50 on the
+apron, then 5.20, 6.60, 8.35, and 10.10 at the back row.
 
 ## Things I decided for you
 
@@ -70,9 +114,11 @@ geometry, not enough to play anything. Everything below is therefore built and r
 
 - [ ] **Biggy's teeter (task 6).** Needs a grown Biggy and actual animation; I saw neither. The
       amplitude is a guess. Eat a few sandwiches and tell me if it's too subtle or too seasick.
-- [ ] **The Level 3 crowd (task 4).** The avoidance steering, the spread across all six tables and
-      the post-grab wandering are all unobserved in motion. Worth a full run.
-- [ ] **Hunger pacing (task 5).** Pure feel.
+- [ ] **The Level 3 crowd (task 4).** Now measured rather than guessed (see above), but measured
+      with Biggy parked and invincible — never *watched*. Whether a busy buffet reads well, and
+      whether diners visibly walk sensible routes, still needs eyes.
+- [ ] **Hunger pacing (task 5).** 39s from full to empty if you never eat. Pure feel, and the
+      number I'd most expect you to want changed.
 - [ ] **How the two new staircases look.** Their *geometry* I did verify, by standing on them and
       reading back the height the game gives: 1m in → 4.25, 2m → 4.00, 6m → 3.00, 8m → 2.75, and
       1.50 on the landing, on both flights, all exactly matching the step formula. But I never got
