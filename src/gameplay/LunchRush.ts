@@ -142,7 +142,13 @@ const BEER_TAP_COOLDOWN = 8;
 // breaking off and actively chasing Biggy down, which is what actually
 // drives this level's difficulty up over a long run, on top of Biggy getting
 // bigger and slower with every bite.
-type DinerState = 'approaching' | 'queued' | 'grabbing' | 'chasing' | 'leaving';
+// 'wandering' is the post-grab loiter: a diner that has just taken a sandwich
+// drifts around the buffet for a leg or two before heading for the exit,
+// instead of turning on the spot and beelining out. The user, watching the
+// crowd sit on the middle tables: "they should not stay in that one spot, and
+// really take the sandwich away, and also walk a bit around: it should be a
+// bit random, taking sandwiches and walking around."
+type DinerState = 'approaching' | 'queued' | 'grabbing' | 'wandering' | 'chasing' | 'leaving';
 
 const ATTENDEE_SPAWN_POINT: [number, number] = [0, 17]; // walking in from the entrance/foyer side
 // Anchored just behind the table's own left end, extending toward +x (right,
@@ -162,6 +168,30 @@ const APPROACH_SPEED = 2.2;
 const LEAVE_SPEED = 2.6;
 const QUEUE_PATIENCE_MIN = 10; // seconds a queued attendee waits before giving up and leaving
 const QUEUE_PATIENCE_MAX = 18;
+// How many diners may be away from the line fetching food at once. The queue
+// used to serve exactly one at a time ("a real line serves one person at a
+// time"), which was the other half of why the outer tables were safe: one
+// grabber, always sent to the nearest slot, never got past the middle of the
+// buffet. Three keeps the line reading as a line while putting enough traffic
+// on the floor that no table stays untouched for long.
+const MAX_CONCURRENT_GRABBERS = 3;
+// Per second, per queued diner, while a grabber slot is free — a staggered
+// trickle rather than the whole line breaking for the table the instant one
+// opens up.
+const GRAB_CHANCE_PER_SEC = 0.5;
+// Post-grab loiter (see DinerState's 'wandering'). Legs are short and start
+// from wherever the diner already is, so a wanderer stays around the buffet
+// where it's a real obstacle, and is gone in a few seconds either way — a
+// long walk would let wanderers fill MAX_ATTENDEES and starve the queue.
+const WANDER_LEGS_MIN = 1;
+const WANDER_LEGS_MAX = 3;
+const WANDER_LEG_MIN_DISTANCE = 4;
+const WANDER_LEG_MAX_DISTANCE = 10;
+// The band the buffet actually occupies — wander targets are clamped into it
+// so a random leg can't send a diner off into an empty corner of a 90x60 hall.
+const WANDER_X_LIMIT = 36;
+const WANDER_Z_MIN = -24;
+const WANDER_Z_MAX = 14;
 const CHASE_SPEED = 5.0; // below the robot's own unboosted 6 — evadable early, much less so once Biggy's grown and slowed down
 const CHASE_TURN_RATE = 3.2;
 const CHASE_TIMEOUT = 6; // seconds a chase lasts before the attendee gives up
@@ -292,6 +322,12 @@ interface Diner {
   armR?: THREE.Object3D;
   bubble: SpeechBubble;
   gripeTimer: number;
+  // The slot this diner is on its way to, while 'grabbing' — held so two
+  // diners sent out at once can't be given the same sandwich (see
+  // pickTargetSlot), and cleared the moment it stops grabbing.
+  targetSlot: SandwichSlot | null;
+  // Remaining post-grab loiter legs, while 'wandering' (see DinerState).
+  wanderLegs: number;
   // See checkAndEscapeIfStuck's own comment.
   stuckCheckTimer: number;
   stuckCheckX: number;
@@ -320,6 +356,91 @@ function findWalkParts(mesh: THREE.Object3D): Pick<Diner, 'legL' | 'legR' | 'arm
 }
 
 /** Steps (x, z) toward (targetX, targetZ) at `speed`, returning the new position/heading and whether it arrived this step. */
+// How far ahead a diner looks for something to walk around. Comfortably more
+// than the one step it is about to take, so the turn begins while there's
+// still room to make it rather than after the push-out has already stalled it.
+const AVOID_LOOKAHEAD = 5;
+
+/**
+ * The heading to walk to reach (targetX, targetZ) while clearing whatever is
+ * in the way — the straight-line heading when the path is clear, rotated just
+ * far enough to graze the nearest blocker's edge when it isn't.
+ *
+ * This is what stops diners living on the lunch tables. They steer in a
+ * straight line and get pushed back out of a collider by exactly the distance
+ * they just walked into it, which is a stable equilibrium they can't escape:
+ * the spawn-to-queue line passes 1.96m from the hall-center-left table, whose
+ * push-out radius is 2.0m, so *every* arriving attendee walked into that one
+ * table and milled around it (the user: "they are now walking on the tables
+ * for a very long time"). checkAndEscapeIfStuck's random sideways nudge only
+ * ever bought a second before the same straight-line steer walked back in.
+ *
+ * Deliberately one step of local avoidance, not pathfinding — it turns around
+ * a single obstacle, and if that turn leads into a second one it re-solves
+ * next frame. That's the same "good enough" bar as the rest of this game's
+ * collision handling, and the stuck-escape below still backstops the corner
+ * cases it can't reason about. Not used for 'chasing': a chaser's dumb,
+ * turn-rate-limited beeline is what makes the tables a real escape tool for
+ * Biggy (the user: "can be used to escape the npcs?"), so giving chasers
+ * avoidance would quietly remove the level's main defensive option.
+ */
+function headingAvoiding(
+  x: number,
+  z: number,
+  targetX: number,
+  targetZ: number,
+  radius: number,
+  colliders: Collider[],
+): number {
+  const dx = targetX - x;
+  const dz = targetZ - z;
+  const distToTarget = Math.hypot(dx, dz);
+  const desired = distToTarget > 0.001 ? Math.atan2(dx, dz) : 0;
+  const ux = Math.sin(desired);
+  const uz = Math.cos(desired);
+
+  // Nearest collider whose clearance circle the straight path actually enters,
+  // ignoring anything behind us or beyond the target.
+  const reach = Math.min(AVOID_LOOKAHEAD, distToTarget);
+  let blocker: Collider | undefined;
+  let blockerAlong = Infinity;
+  for (const c of colliders) {
+    const relX = c.x - x;
+    const relZ = c.z - z;
+    const along = relX * ux + relZ * uz;
+    if (along <= 0 || along > reach || along >= blockerAlong) continue;
+    const clearance = c.radius + radius;
+    if (Math.abs(relX * uz - relZ * ux) >= clearance) continue;
+    // You can't walk around the thing you're walking to. A grabbing diner's
+    // target is a sandwich sitting on a table, which is inside that table's
+    // own collider — without this, the one obstacle it must approach is the
+    // one it would circle forever.
+    const targetDx = targetX - c.x;
+    const targetDz = targetZ - c.z;
+    if (targetDx * targetDx + targetDz * targetDz < clearance * clearance) continue;
+    blocker = c;
+    blockerAlong = along;
+  }
+  if (!blocker) return desired;
+
+  const relX = blocker.x - x;
+  const relZ = blocker.z - z;
+  const centerDist = Math.hypot(relX, relZ);
+  const clearance = blocker.radius + radius;
+  // Already inside the clearance circle (the push-out loop puts diners exactly
+  // on its edge, and float error can leave them a hair inside): there is no
+  // tangent to aim for, so just head straight out before resuming.
+  if (centerDist <= clearance) return Math.atan2(-relX, -relZ);
+
+  // Aim at the blocker's edge rather than its center: offset from the bearing
+  // to it by the half-angle its clearance circle subtends, to whichever side
+  // we're already leaning, so the diner takes the shorter way around.
+  const toBlocker = Math.atan2(relX, relZ);
+  const tangentOffset = Math.asin(clearance / centerDist);
+  const diff = ((toBlocker - desired + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+  return diff > 0 ? toBlocker - tangentOffset : toBlocker + tangentOffset;
+}
+
 function stepToward(
   x: number,
   z: number,
@@ -327,12 +448,16 @@ function stepToward(
   targetZ: number,
   speed: number,
   dt: number,
+  // Omit to walk a dead-straight line (see headingAvoiding on why 'chasing'
+  // does exactly that).
+  avoid?: { radius: number; colliders: Collider[] },
 ): { x: number; z: number; heading: number; arrived: boolean } {
   const dx = targetX - x;
   const dz = targetZ - z;
   const dist = Math.hypot(dx, dz);
-  const heading = dist > 0.001 ? Math.atan2(dx, dz) : 0;
-  if (dist <= speed * dt) return { x: targetX, z: targetZ, heading, arrived: true };
+  const direct = dist > 0.001 ? Math.atan2(dx, dz) : 0;
+  if (dist <= speed * dt) return { x: targetX, z: targetZ, heading: direct, arrived: true };
+  const heading = avoid ? headingAvoiding(x, z, targetX, targetZ, avoid.radius, avoid.colliders) : direct;
   return { x: x + Math.sin(heading) * speed * dt, z: z + Math.cos(heading) * speed * dt, heading, arrived: false };
 }
 
@@ -419,20 +544,43 @@ export class LunchRush {
   }
 
   /** Nearest currently-stocked slot to (x, z), or null if the whole buffet is empty right now. */
-  private findAvailableSlot(x: number, z: number): SandwichSlot | null {
-    let best: SandwichSlot | null = null;
-    let bestDistSq = Infinity;
-    for (const slot of this.slots) {
-      if (!slot.type) continue;
-      const dx = slot.x - x;
-      const dz = slot.z - z;
-      const distSq = dx * dx + dz * dz;
-      if (distSq < bestDistSq) {
-        bestDistSq = distSq;
-        best = slot;
-      }
+  /**
+   * A stocked sandwich slot for a diner to go fetch, chosen uniformly at
+   * random among those nobody is already on their way to.
+   *
+   * Deliberately random rather than nearest-first, which is what it used to
+   * be. The queue stands at x -12..7.6, so the nearest stocked slot was
+   * essentially always one of the two "between" tables in the middle of the
+   * hall — the left table at x -30 and the right one at x +30 were never once
+   * chosen, which is exactly the safe spot the user found: "sandwiches on the
+   * tables outer left and outer right are very safe to take - all npcs are
+   * concentrated in the middle". Uniform choice over the ten slots sends 2 in
+   * 10 diners to each outer table, so no table is reliably unattended.
+   *
+   * The claim check matters now that several diners fetch at once
+   * (MAX_CONCURRENT_GRABBERS): without it two of them would walk to the same
+   * sandwich and one would arrive to find it gone.
+   */
+  private pickTargetSlot(): SandwichSlot | null {
+    const claimed = new Set<SandwichSlot>();
+    for (const d of this.diners) {
+      if (d.state === 'grabbing' && d.targetSlot) claimed.add(d.targetSlot);
     }
-    return best;
+    const available = this.slots.filter((s) => s.type && !claimed.has(s));
+    if (!available.length) return null;
+    return available[Math.floor(Math.random() * available.length)];
+  }
+
+  /**
+   * Sends a diner off on one more loiter leg: a short hop from wherever it is
+   * now, clamped into the band the buffet actually occupies so a random
+   * direction can't march it into an empty corner of the hall.
+   */
+  private setWanderTarget(d: Diner): void {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = WANDER_LEG_MIN_DISTANCE + Math.random() * (WANDER_LEG_MAX_DISTANCE - WANDER_LEG_MIN_DISTANCE);
+    d.targetX = THREE.MathUtils.clamp(d.x + Math.sin(angle) * distance, -WANDER_X_LIMIT, WANDER_X_LIMIT);
+    d.targetZ = THREE.MathUtils.clamp(d.z + Math.cos(angle) * distance, WANDER_Z_MIN, WANDER_Z_MAX);
   }
 
   private spawnDiner(): void {
@@ -465,6 +613,8 @@ export class LunchRush {
       ...findWalkParts(mesh),
       bubble,
       gripeTimer: GRIPE_INTERVAL_MIN + Math.random() * (GRIPE_INTERVAL_MAX - GRIPE_INTERVAL_MIN),
+      targetSlot: null,
+      wanderLegs: 0,
       stuckCheckTimer: STUCK_CHECK_INTERVAL,
       stuckCheckX: ATTENDEE_SPAWN_POINT[0],
       stuckCheckZ: ATTENDEE_SPAWN_POINT[1],
@@ -544,13 +694,21 @@ export class LunchRush {
           pickedUp = true;
           this.hunger = Math.min(HUNGER_MAX, this.hunger + HUNGER_RESTORE_PER_SANDWICH);
 
-          // Eating right next to a queued/approaching attendee provokes them
-          // for sure, unlike the weaker passive proximity check below.
+          // Eating right next to an attendee who came here to eat provokes
+          // them for sure, unlike the weaker passive proximity check below.
+          // 'grabbing' and 'wandering' count too: taking the sandwich out from
+          // under someone walking to that very table is the most provocative
+          // thing Biggy can do, and those are the diners now spread across the
+          // whole buffet rather than bunched in the line.
           for (const d of this.diners) {
-            if (d.state !== 'queued' && d.state !== 'approaching') continue;
+            if (d.state !== 'queued' && d.state !== 'approaching' && d.state !== 'grabbing' && d.state !== 'wandering') continue;
             const ddx = d.x - slot.x;
             const ddz = d.z - slot.z;
             if (ddx * ddx + ddz * ddz < STEAL_ALERT_RADIUS * STEAL_ALERT_RADIUS) {
+              // Drop any claim on a slot before switching goals, or
+              // pickTargetSlot would keep that sandwich reserved for a diner
+              // that is now chasing Biggy instead.
+              d.targetSlot = null;
               d.state = 'chasing';
               d.chaseTimer = CHASE_TIMEOUT;
               d.bubble.show(randomLunchChaseLine(), HIT_REACTION_DURATION);
@@ -649,20 +807,26 @@ export class LunchRush {
     // a sandwich off the table, so a queued diner just stood there griping
     // until patience ran out or it broke off to chase Biggy (the user: "it looks
     // like the npcs aren't really grabbing the sandwiches, they are stuck").
-    // Only the one diner at the front of the line looks for food each frame
-    // (below, in the 'queued' case) — a real line serves one person at a
-    // time, and letting every queued diner rush the table at once would look
-    // like a scrum, not a queue. "Front" is just the earliest still-'queued'
-    // diner in array order, since diners are pushed in spawn order and
-    // filtered out (never reordered) as they leave.
-    const frontQueuedDiner = this.diners.find((d) => d.state === 'queued');
+    //
+    // Serving was then limited to the single front-of-line diner, on the
+    // reasoning that a real line serves one person at a time. Combined with
+    // nearest-slot targeting that turned out to be half of why the buffet's
+    // two outer tables were free food: one grabber at a time, always sent to
+    // whatever was closest to the line, never reached them. Now up to
+    // MAX_CONCURRENT_GRABBERS are out at once, each breaking off on its own
+    // random roll rather than in lockstep, so the line still reads as a line
+    // and the floor still has traffic on it.
+    let activeGrabbers = this.diners.reduce((n, d) => n + (d.state === 'grabbing' ? 1 : 0), 0);
+    // Every navigating state except 'chasing' walks around obstacles rather
+    // than into them — see headingAvoiding for why chasers are the exception.
+    const avoid = { radius: HAZARD_RADIUS, colliders };
 
     for (const d of this.diners) {
       if (fell) break; // game's over — stop advancing anyone else this frame
 
       switch (d.state) {
         case 'approaching': {
-          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt);
+          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoid);
           d.x = step.x;
           d.z = step.z;
           d.heading = step.heading;
@@ -680,12 +844,14 @@ export class LunchRush {
             d.targetZ = ATTENDEE_SPAWN_POINT[1];
             break;
           }
-          if (d === frontQueuedDiner) {
-            const slot = this.findAvailableSlot(d.x, d.z);
+          if (activeGrabbers < MAX_CONCURRENT_GRABBERS && Math.random() < GRAB_CHANCE_PER_SEC * dt) {
+            const slot = this.pickTargetSlot();
             if (slot) {
               d.state = 'grabbing';
+              d.targetSlot = slot;
               d.targetX = slot.x;
               d.targetZ = slot.z;
+              activeGrabbers += 1;
               break;
             }
           }
@@ -714,7 +880,7 @@ export class LunchRush {
             // Biggy (or the sandwich's own crab-lifetime timeout) may have
             // taken it in the meantime, in which case this diner just leaves
             // empty-handed rather than idling to look for a second target.
-            const slot = this.slots.find((s) => s.x === d.targetX && s.z === d.targetZ);
+            const slot = d.targetSlot;
             if (slot && slot.type && slot.mesh) {
               slot.sandwich?.dispose();
               this.group.remove(slot.mesh);
@@ -724,14 +890,48 @@ export class LunchRush {
               slot.type = null;
               slot.cooldown = SLOT_RESPAWN_COOLDOWN;
             }
-            d.state = 'leaving';
-            d.targetX = ATTENDEE_SPAWN_POINT[0];
-            d.targetZ = ATTENDEE_SPAWN_POINT[1];
+            d.targetSlot = null;
+            activeGrabbers -= 1;
+            // Sandwich in hand, now drift around the buffet for a leg or two
+            // before heading out — see DinerState's 'wandering'.
+            d.state = 'wandering';
+            d.wanderLegs = WANDER_LEGS_MIN + Math.floor(Math.random() * (WANDER_LEGS_MAX - WANDER_LEGS_MIN + 1));
+            this.setWanderTarget(d);
           } else {
-            const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt);
+            const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoid);
             d.x = step.x;
             d.z = step.z;
             d.heading = step.heading;
+          }
+          break;
+        }
+        case 'wandering': {
+          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoid);
+          d.x = step.x;
+          d.z = step.z;
+          d.heading = step.heading;
+          if (step.arrived) {
+            d.wanderLegs -= 1;
+            if (d.wanderLegs > 0) {
+              this.setWanderTarget(d);
+            } else {
+              d.state = 'leaving';
+              d.targetX = ATTENDEE_SPAWN_POINT[0];
+              d.targetZ = ATTENDEE_SPAWN_POINT[1];
+            }
+          }
+          // A wanderer is loose on the floor with a sandwich Biggy wants, so
+          // it's provokable like a queued one — otherwise the safest moment in
+          // the level would be standing next to the diner who just took the
+          // sandwich you were going for.
+          const dxToRobot = robotX - d.x;
+          const dzToRobot = robotZ - d.z;
+          if (dxToRobot * dxToRobot + dzToRobot * dzToRobot < CHASE_DETECTION_RADIUS * CHASE_DETECTION_RADIUS) {
+            if (Math.random() < PASSIVE_CHASE_CHANCE_PER_SEC * dt) {
+              d.state = 'chasing';
+              d.chaseTimer = CHASE_TIMEOUT;
+              d.bubble.show(randomLunchChaseLine(), HIT_REACTION_DURATION);
+            }
           }
           break;
         }
@@ -754,7 +954,7 @@ export class LunchRush {
           break;
         }
         case 'leaving': {
-          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, LEAVE_SPEED, dt);
+          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, LEAVE_SPEED, dt, avoid);
           d.x = step.x;
           d.z = step.z;
           d.heading = step.heading;
