@@ -258,9 +258,18 @@ const HUNGER_MAX = 100;
 // to fail a fresh run in ~85s if the buffet's ignored entirely, ramps up to
 // double that pace by HUNGER_DRAIN_RAMP_DURATION survived, and holds there
 // (capped) rather than climbing forever into an unplayable instant-drain.
-const HUNGER_DRAIN_RATE_BASE = HUNGER_MAX / 85; // per second, at survivedTime = 0
-const HUNGER_DRAIN_RATE_MAX = HUNGER_MAX / 40; // per second, the late-run cap
-const HUNGER_DRAIN_RAMP_DURATION = 90; // seconds to go from base to max
+//
+// Sped up across the board 2026-09-29 — the user: "level 3 hungry bar goes
+// very slow, almost no need to look at it." It was previously 85s to starve
+// from full, against a run whose other pressure (the chase) is lethal within
+// seconds, so the bar was background noise you could ignore while playing the
+// crowd. At 50s a full bar is about four unhurried sandwiches' worth of time,
+// which is short enough that a player who never detours to the buffet dies of
+// it, and the ramp arrives sooner so the squeeze is felt inside a good run
+// rather than only after one.
+const HUNGER_DRAIN_RATE_BASE = HUNGER_MAX / 50; // per second, at survivedTime = 0
+const HUNGER_DRAIN_RATE_MAX = HUNGER_MAX / 25; // per second, the late-run cap
+const HUNGER_DRAIN_RAMP_DURATION = 70; // seconds to go from base to max
 // Flat per sandwich regardless of type — keeps the mental math simple ("about
 // 4 sandwiches keeps me topped up") rather than needing a second per-type
 // balancing table on top of SANDWICH_SCORE/SANDWICH_GROWTH.
