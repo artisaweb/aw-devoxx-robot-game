@@ -12,7 +12,7 @@
 
 export type KnowledgeQuoteId =
   | 'stream-single-use'
-  | 'sql-join'
+  | 'undocumented-feature'
   | 'kubernetes-cluster'
   | 'microservice-monolith'
   | 'cloud-other-computer'
@@ -26,7 +26,7 @@ export type KnowledgeQuoteId =
 
 export const KNOWLEDGE_QUOTES: Record<KnowledgeQuoteId, string> = {
   'stream-single-use': 'A stream is like a condom: do not reuse.',
-  'sql-join': 'A SQL query walks into a bar, sees two tables, and asks: "Can I join you?"',
+  'undocumented-feature': "It's not a bug, it's an undocumented feature.",
   'kubernetes-cluster': 'Kubernetes: turning one problem into a cluster of them.',
   'microservice-monolith': 'A microservice is just a monolith, chopped into twelve smaller problems.',
   'cloud-other-computer': "The cloud is just someone else's computer.",

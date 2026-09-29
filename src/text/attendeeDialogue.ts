@@ -9,34 +9,27 @@
 // crab sandwich) or shared developer folklore (the "demo gods" failing a
 // live-coding talk — a real, beloved self-aware running joke speakers make
 // about themselves, not a complaint about Devoxx) is fair game as long as it
-// actually lands as funny rather than frustrated. Genuinely frustrated-
-// attendee jokes — wifi complaints, cold coffee, endless queues, stolen
-// badges — stay out entirely, with one narrow exception: "comic censoring"
-// (grawlix-style #@!% standing in for swearing) is fine for a startled,
-// self-directed exclamation at the moment of a mishap (spilling your own
-// coffee, say) rather than a complaint — see the one hit-reaction line below
-// that uses it. Deliberately just the one, though, not every line — it reads
-// as a fun exception, not the norm.
+// actually lands as funny rather than frustrated. 
 //
-// Several lines below are original jokes written from real Devoxx/
+// Several lines below are written from real Devoxx/
 // dev-conference *themes* (crab sandwiches, schedule FOMO, the Kinepolis
 // cinema venue, the "hallway track", sticker-collecting culture) rather than
 // any specific person's actual words — same "inspired by, never copied" rule
-// as the robot models and the NPC archetypes' speaker-style likenesses.
+// as the NPC archetypes' speaker-style likenesses.
 
 /** Shown periodically while a Level 1 hazard wanders (not while actively chasing) — pure flavor, no gameplay effect. */
 export const AMBIENT_GRIPES = [
   "IT'S PASTA INSTEAD OF SANDWICHES TODAY?!", // the crab-sandwich craving, with a menu-swap twist
   'HAS ANYONE SEEN MY BADGE?',
   'ANYONE GOT A SPARE LAPTOP CHARGER?',
-  'THE DEMO GODS SAID NO TODAY.', // the real, beloved "demo gods" running joke — self-aware, not a complaint about Devoxx
-  'WHAT\'S THE WIFI PASSWORD AGAIN?', // same real theme as before, reframed as a friendly ask instead of a complaint
-  'THREE GREAT TALKS, ONE ME!', // the classic overlapping-schedule FOMO, framed as excitement, not annoyance
-  'WHICH SCREENING ROOM WAS I IN AGAIN?', // Kinepolis's numbered auditoriums, a real venue detail
-  'I NEED MORE LAPTOP STICKERS!', // sticker-collecting from sponsor booths is real conference culture
-  'THESE SEATS ARE SO COMFY, I ALMOST DOZED OFF', // it's a literal cinema — reclined movie seats, not conference chairs
-  'WHAT TIME IS THE MOVIE?', // leans straight into "wait, this is a cinema"
-  'WHAT TALK ARE YOU HEADED TO NEXT?', // the "hallway track" chatter Devoxx is known for
+  'THE DEMO GODS SAID NO TODAY.',
+  'WHAT\'S THE WIFI PASSWORD AGAIN?',
+  'THREE GREAT TALKS, ONE ME!',
+  'WHICH SCREENING ROOM WAS I IN AGAIN?',
+  'I NEED MORE LAPTOP STICKERS!',
+  'THESE SEATS ARE SO COMFY, I ALMOST DOZED OFF',
+  'WHAT TIME IS THE MOVIE?',
+  'WHAT TALK ARE YOU HEADED TO NEXT?',
 ];
 
 /**
