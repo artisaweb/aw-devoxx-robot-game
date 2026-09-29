@@ -18,7 +18,7 @@ breakdown and a combined total for the whole day.
 
 ### 1. Voxxy — Swag Run
 
-![Level 1, the exhibition hall: Voxxy standing in front of the DEVOXX letters on the foyer landing, with sponsor booths and swag pickups around the hall](docs/screenshots/level1-swag-run.jpg)
+![Level 1, the exhibition hall: Voxxy out on the floor beside the Vaultius booth and its vault door, with the MIRACLE SYSTEMS stand further along, the DEVOXX letters on the foyer landing behind him and an attendee crossing at the right](docs/screenshots/level1-swag-run.jpg)
 
 *Ground floor, the exhibition hall.* Voxxy is the quick, light one. Grab as much sponsor swag as
 you can before the clock runs out, weaving between booths and the wandering crowd — an attendee
@@ -26,7 +26,7 @@ who walks into you knocks the last thing you picked up straight out of your hand
 
 ### 2. Droid — Knowledge Run
 
-![Level 2, auditorium 4: Droid in the aisle between raked cinema seating, with the DEVOXX letters and a live-coding screen on stage and the red room-4 sign on the wall](docs/screenshots/level2-knowledge-run.jpg)
+![Level 2, auditorium 4: Droid in the aisle between raked cinema seating, with the DEVOXX letters and the branded live-coding screen on stage, quotes glowing along the rows, and an attendee closing in from the right](docs/screenshots/level2-knowledge-run.jpg)
 
 *First floor, the auditorium level.* Droid is tall and deliberate. Collect one-liners of
 conference wisdom scattered down a 180-metre corridor and up through auditorium 4's seating,
@@ -35,7 +35,7 @@ free. A bump topples Droid, and he is slow to get back up.
 
 ### 3. Biggy — Lunch Rush
 
-![Level 3, the same hall at lunchtime: Biggy, round and heavy, standing between two buffet tables with the JAVA COFFEE machine beside him](docs/screenshots/level3-lunch-rush.jpg)
+![Level 3, the same hall at lunchtime: Biggy, round and heavy, standing between two buffet tables with sandwiches laid out on them, the JAVA COFFEE machine off to his left](docs/screenshots/level3-lunch-rush.jpg)
 
 *Ground floor again, redressed for lunchtime.* Biggy is heavy and slow, and every sandwich he eats
 makes him permanently bigger, slower and harder to turn. Two things can end the run: his hunger
