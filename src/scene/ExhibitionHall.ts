@@ -2337,9 +2337,13 @@ export function createFirstFloor(): THREE.Group {
   // hazard design is six attendees chasing straight down that corridor with
   // turn-rate-limited steering and no pathfinding — the same shape that made
   // the wide lunch tables an unbeatable hiding spot downstairs (see
-  // LUNCH_TABLE_ZONES). Here it costs the corridor nothing: the glyph
-  // colliders' own push-out reaches x=-19.5, still clear of the walkable
-  // limit. 1.3m out from the corridor edge also threads the furniture strip's
+  // LUNCH_TABLE_ZONES). Here it costs the corridor almost nothing: measured,
+  // the glyph colliders' own push-out reaches x=-19.45, so it eats 0.55m off
+  // the corridor's 14m clear lane over the 6.2m of its length (the glyphs run
+  // along z 29.9..36.1, all at x=-21.3, since rotating by PI/2 spreads them
+  // down the corridor rather than across it). Nothing becomes unwalkable —
+  // isOnFirstFloor is unchanged there, and the whole side strip is walkable
+  // anyway. 1.3m out from the corridor edge also threads the furniture strip's
   // own occupants — chairs and fabric pillars both sit at x=-23.2 — and the
   // pillar uplight at z=32 happens to wash straight down over the letters.
   addDevoxxLetters(group, firstFloorLetterColliders, {
