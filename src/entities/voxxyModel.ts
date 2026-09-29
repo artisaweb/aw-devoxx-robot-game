@@ -137,8 +137,6 @@ const DEFAULT_HEIGHT = 1.7;
 const gltfLoader = new GLTFLoader();
 
 export type RobotAnimationName = 'walk' | 'run' | 'jump' | 'stun' | 'idle';
-/** @deprecated kept as an alias — was the only robot when this was named. */
-export type VoxxyAnimationName = RobotAnimationName;
 
 export interface RobotAsset {
   model: THREE.Object3D;

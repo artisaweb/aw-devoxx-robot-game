@@ -6,6 +6,10 @@ import { mat } from './shared';
 
 export const ROCKETMIND_ROTATION = { cx: BOOTH_PLATFORM_ZONES[0].x, cz: BOOTH_PLATFORM_ZONES[0].z, angle: Math.PI / 2 };
 
+// RocketMind's own gradient sign texture (magenta -> orange -> yellow) with
+// its name + tagline — distinct from every other booth's flat-accent banner,
+// fitting its "sci-fi IDE of 2040" framing rather than diluting it into the
+// shared plain style.
 function createRocketMindSignTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
