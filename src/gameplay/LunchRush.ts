@@ -80,6 +80,27 @@ const PICKUP_RADIUS = 1.4;
 // pushed-back distance (this wider radius, standing in for a reach across
 // the edge) — see the onTable check in update() below.
 const GROUND_REACH_RADIUS = 4.5;
+/**
+ * Biggy's own reach, which has to grow with him.
+ *
+ * GROUND_REACH_RADIUS above is tuned for an ungrown robot, and the diners
+ * (who never grow) keep using it as-is. Biggy is different: his push-out
+ * distance from every collider is `radius + WALL_CLEARANCE * growthScale`, so
+ * the bigger he gets the further the table holds him off the sandwich sitting
+ * on it — while a fixed reach stays put. Measured at MAX_SIZE_SCALE, that
+ * silently put 4 of the 10 slots out of ground-level range, including both
+ * ends of the right-hand table (the KING booth's colliders crowd it, so it
+ * loses out first): closest he could get was 4.65m against a 4.5m reach.
+ *
+ * This is the same failure the JAVA machine already hit once ("i was running
+ * into it and it did nothing"), which is why COFFEE_RADIUS and
+ * BEER_TAP_RADIUS are both derived from MAX_SIZE_SCALE rather than guessed.
+ * Scaling by the same WALL_CLEARANCE term that pushes him back keeps the two
+ * in step at every size instead of only at the extremes.
+ */
+function groundReachFor(sizeScale: number): number {
+  return GROUND_REACH_RADIUS + WALL_CLEARANCE * (sizeScale - 1);
+}
 const SANDWICH_SURFACE_Y = 0.8; // must match LUNCH_TABLE_ZONES' shared height
 const SANDWICH_Y_TOLERANCE = 0.4; // same magnitude as SwagRun's PICKUP_Y_TOLERANCE
 const SLOT_RESPAWN_COOLDOWN = 5; // seconds an emptied slot waits before restocking
@@ -749,7 +770,7 @@ export class LunchRush {
         const dx = robotX - slot.x;
         const dz = robotZ - slot.z;
         const onTable = Math.abs(robot.position.y - SANDWICH_SURFACE_Y) < SANDWICH_Y_TOLERANCE;
-        const reach = onTable ? PICKUP_RADIUS : GROUND_REACH_RADIUS;
+        const reach = onTable ? PICKUP_RADIUS : groundReachFor(robot.sizeScale);
         if (dx * dx + dz * dz < reach * reach) {
           const type = slot.type;
           this.score += SANDWICH_SCORE[type];
