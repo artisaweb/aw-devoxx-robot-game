@@ -56,9 +56,24 @@ bar in **61s** (not 85s), the new one empties it in **39s** (not 50s), with the
 low warning at 31s. 39s is aggressive — this is the number most worth a second
 opinion once you can play it.
 
-I also checked all 12 Level 2 nuggets are on walkable floor and not inside any
-obstacle, and that the Room 4 ones still sit at the intended climb: 4.50 on the
-apron, then 5.20, 6.60, 8.35, and 10.10 at the back row.
+**Three more checks, all clean:**
+
+*Nothing the new DEVOXX letter colliders block.* Adding them to the Level 1 and
+Level 3 collider lists could have made a pickup unreachable — the same class of
+bug as above. All 8 swag pickups, all 10 sandwich slots and both vending
+machines are clear of them. The foyer set is only ~6.3m wide on a 26m landing,
+so there is plenty of room round either end.
+
+*All 12 Level 2 nuggets* are on walkable floor and not inside any obstacle, and
+the Room 4 ones still sit at the intended climb: 4.50 on the apron, then 5.20,
+6.60, 8.35, and 10.10 at the back row.
+
+*The teeter scales as intended and is correctly suppressed.* Peak roll while
+standing still, by size: 1.0 → 0.00°, 1.4 → 2.3°, 1.8 → 4.7°, 2.2 → 7.0°,
+2.6 → 9.6° (about 14° at full size once walking adds TEETER_MOVING_BOOST). A
+fallen robot, a toppled one, and any robot that never grew all read exactly 0 —
+so Voxxy and Droid are genuinely untouched. What's still unverified is only
+whether ~14° *looks* right.
 
 ## Things I decided for you
 
@@ -112,8 +127,10 @@ background, so the game only advances about one frame per screenshot — enough 
 geometry, not enough to play anything. Everything below is therefore built and reasoned about but
 **not** seen in motion:
 
-- [ ] **Biggy's teeter (task 6).** Needs a grown Biggy and actual animation; I saw neither. The
-      amplitude is a guess. Eat a few sandwiches and tell me if it's too subtle or too seasick.
+- [ ] **Biggy's teeter (task 6).** The maths is now verified (see above) — it scales smoothly to
+      about 14° at full size and is correctly off for Voxxy, Droid and a downed Biggy. What no
+      test can tell me is whether that *reads* as "barely standing" or as seasick. Eat a few
+      sandwiches and say which way to push `TEETER_MAX_AMPLITUDE`.
 - [ ] **The Level 3 crowd (task 4).** Now measured rather than guessed (see above), but measured
       with Biggy parked and invincible — never *watched*. Whether a busy buffet reads well, and
       whether diners visibly walk sensible routes, still needs eyes.
