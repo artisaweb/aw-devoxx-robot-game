@@ -3,6 +3,7 @@ import {
   Collider,
   getFirstFloorHeightAt,
   isOnFirstFloor,
+  isInSideStairwell,
   FIRST_FLOOR_ROOM4_ZONE,
   FIRST_FLOOR_CENTER_X,
 } from '../scene/ExhibitionHall';
@@ -574,20 +575,25 @@ export class KnowledgeRun {
       // wall between two rooms can't misclassify which one the check means),
       // so a hazard only ever crosses into a room through its actual
       // doorway, same as the player.
+      // Attendees are additionally kept out of the two mid-corridor
+      // stairwells, which the player can walk down but which dead-end at a
+      // closed door — see isInSideStairwell for why one wandering down there
+      // is worse than it sounds.
+      const canStand = (x: number, z: number) => isOnFirstFloor(x, z) && !isInSideStairwell(x, z);
       const curX = h.x;
       const curZ = h.z;
       let bounced = false;
-      if (!isOnFirstFloor(nextX, curZ)) {
+      if (!canStand(nextX, curZ)) {
         h.heading = -h.heading;
         nextX = curX;
         bounced = true;
       }
-      if (!isOnFirstFloor(curX, nextZ)) {
+      if (!canStand(curX, nextZ)) {
         h.heading = Math.PI - h.heading;
         nextZ = curZ;
         bounced = true;
       }
-      if (!isOnFirstFloor(nextX, nextZ)) {
+      if (!canStand(nextX, nextZ)) {
         nextX = curX;
         nextZ = curZ;
         bounced = true;
@@ -628,7 +634,7 @@ export class KnowledgeRun {
           const dist = Math.sqrt(distSq);
           const pushedX = other.x + (dx / dist) * minDist;
           const pushedZ = other.z + (dz / dist) * minDist;
-          if (isOnFirstFloor(pushedX, pushedZ)) {
+          if (canStand(pushedX, pushedZ)) {
             nextX = pushedX;
             nextZ = pushedZ;
           }

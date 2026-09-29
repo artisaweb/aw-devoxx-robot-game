@@ -327,6 +327,23 @@ const SIDE_STAIRS: SideStair[] = [
   },
 ];
 
+/**
+ * True anywhere inside either mid-corridor stairwell (see SIDE_STAIRS).
+ *
+ * The player may walk down these; Level 2's attendees may not (KnowledgeRun
+ * applies this alongside its isOnFirstFloor bounds check). They are
+ * placeholder scenery ending at a closed door, so an attendee that wanders
+ * down one has left the level for good — measured before this existed, one
+ * hazard in six four-minute runs walked into a stairwell and was still down
+ * there 210 seconds later, which quietly removes a tenth of the level's
+ * difficulty and parks a visibly stuck attendee at the bottom.
+ */
+export function isInSideStairwell(x: number, z: number): boolean {
+  return SIDE_STAIRS.some(
+    ({ zone }) => Math.abs(x - zone.x) <= zone.halfW && Math.abs(z - zone.z) <= zone.halfD,
+  );
+}
+
 /** stairHeightAt's formula on the x axis — see SideStair. Returns undefined anywhere outside both runs, so callers fall through to the normal zone height. */
 function sideStairHeightAt(x: number, z: number): number | undefined {
   for (const stair of SIDE_STAIRS) {
