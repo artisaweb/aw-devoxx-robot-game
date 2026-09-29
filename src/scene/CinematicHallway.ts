@@ -70,7 +70,6 @@ const DEFAULT_PALETTE: HallwayPalette = {
 const PILLAR_SPACING = 18; // matches the prototype's own spacing
 const TABLE_SPACING = 6;
 const DOOR_WIDTH = 4;
-const DOOR_HEIGHT = 3.5;
 const DOOR_CLEARANCE_Z = 4.5; // furniture skips within this of any door's own z, same as the prototype
 
 // Collider radii for the furniture/kiosk props below — sized to each prop's
