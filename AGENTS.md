@@ -33,7 +33,7 @@ No test suite and no lint config exist in this repo — `npm run build` (via `ts
 
 Debug entry points (gated to `isLocalHost()`, see `src/util/env.ts` — ignored on any hosted build): `?level=2` / `?level=3` jump straight to a level by chaining the real transitions (so skipped levels honestly score 0), and `?x=&z=&heading=` drops the robot at an exact spot for reproducing a bug report.
 
-### Two floors, joined by door teleports, not visible geometry
+### Two floors, joined by a closed door, not visible geometry
 
 `Floor = 'ground' | 'first'` (`src/scene/ExhibitionHall.ts`). The two levels' maps are not architecturally connected — the real venue's stairwell between them is behind closed doors the player never sees, so the floors are joined by a closed door rather than modelled connecting geometry. This means they can have entirely separate visual identities and don't need to line up spatially.
 
