@@ -15,6 +15,9 @@ import {
   getDevoxxLetterColliders,
   updateDevoxxLetters,
   resetDevoxxLetters,
+  getChargingDockColliders,
+  getChargingDockMarkers,
+  updateChargingDocks,
   FIRST_FLOOR_SPAWN,
   FLOOR_HEIGHT,
   Collider,
@@ -103,6 +106,9 @@ export class Game {
     // hand-kept copy of their coordinates; safe to spread here because the
     // groundFloorGroup field above is initialized first.
     ...getDevoxxLetterColliders('ground'),
+    // The entrance-end charging dock's column (its pad is walk-on, see
+    // getChargingDockColliders).
+    ...getChargingDockColliders('ground'),
     { x: COFFEE_MACHINE_POS[0], z: COFFEE_MACHINE_POS[1], radius: KIOSK_COLLIDER_RADIUS },
     { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], radius: KIOSK_COLLIDER_RADIUS },
   ];
@@ -124,6 +130,7 @@ export class Game {
     // attendees should route around too, so they stay in
     // firstFloorHazardColliders below.
     ...getDevoxxLetterColliders('first'),
+    ...getChargingDockColliders('first'),
     // Room 4's stage, height-gated at its own top face (see
     // getAuditoriumStageColliders) — without this the stage has a walkable
     // top surface but nothing stopping you walking into it, and
@@ -144,9 +151,18 @@ export class Game {
     ...getStairEnclosureColliders(),
     ...getLunchTableColliders(),
     ...getDevoxxLetterColliders('ground'), // same foyer letters as Level 1 — same ground floor, redressed
+    ...getChargingDockColliders('ground'),
     { x: JAVA_MACHINE_POS[0], z: JAVA_MACHINE_POS[1], radius: KIOSK_COLLIDER_RADIUS },
     { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], radius: KIOSK_COLLIDER_RADIUS },
   ];
+  // Charging docks on the minimap, in the dock's own charging cyan so they read
+  // as distinct from the gold refuel kiosks and KING's pink claw. Both floors:
+  // the user asked for the ground-floor one on "both levels" (it serves Level 1
+  // and Level 3, the two that share that map), and Level 2's three are the
+  // whole reason the docks exist, so hiding those would be the odd choice.
+  // Built once — docks never move, and updateMinimap runs every frame.
+  private groundDockMarkers = getChargingDockMarkers('ground').map((d) => ({ ...d, color: '#3fd8ff' }));
+  private firstFloorDockMarkers = getChargingDockMarkers('first').map((d) => ({ ...d, color: '#3fd8ff' }));
   private clock = new THREE.Clock();
   private level: 1 | 2 | 3 = 1;
   private swagRun: SwagRun | undefined = new SwagRun();
@@ -423,6 +439,9 @@ export class Game {
       // keeps falling instead of freezing at an angle, but nothing new gets
       // knocked over while the level is frozen.
       updateDevoxxLetters(dt, this.robot.mapMode);
+      // Docks keep their idle ring breathing behind the intro panel; no mover,
+      // so nothing charges while the level is frozen.
+      updateChargingDocks(dt, this.robot.mapMode);
     } else if (finished) {
       // Freeze in place once the level ends — walking around behind the
       // overlay read as a bug, and it's what the continue prompt is for.
@@ -468,6 +487,17 @@ export class Game {
         z: this.robot.position.z,
         sizeScale: this.robot.sizeScale,
       });
+      // Charging docks, same shape: ExhibitionHall can't import Robot, so it
+      // reports the energy earned by standing on a pad this frame and the
+      // restore happens here. Accrued per second rather than handed over in one
+      // lump like the kiosks — the cost is the time spent standing there.
+      const charge = updateChargingDocks(dt, this.robot.mapMode, {
+        x: this.robot.position.x,
+        y: this.robot.position.y,
+        z: this.robot.position.z,
+        sizeScale: this.robot.sizeScale,
+      });
+      if (charge > 0) this.robot.restoreEnergy(charge);
 
       if (this.level === 1) {
         const { stunned, pickedUp } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);
@@ -548,6 +578,7 @@ export class Game {
         [
           { x: COFFEE_MACHINE_POS[0], z: COFFEE_MACHINE_POS[1], color: '#c9a24b' },
           { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], color: '#ff5f8f' },
+          ...this.groundDockMarkers,
         ],
         1,
       );
@@ -558,7 +589,7 @@ export class Game {
         this.robot.position.z,
         this.robot.heading,
         this.knowledgeRun!.knowledgeMarkers,
-        [],
+        this.firstFloorDockMarkers,
         2,
       );
     } else {
@@ -589,6 +620,7 @@ export class Game {
         [
           { x: JAVA_MACHINE_POS[0], z: JAVA_MACHINE_POS[1], color: '#c9a24b' },
           { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], color: '#ff5f8f' },
+          ...this.groundDockMarkers,
         ],
         // Level 3 reuses the ground floor's own map layout for the minimap,
         // regardless of the game-level number.
