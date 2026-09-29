@@ -174,17 +174,33 @@ const QUEUE_PATIENCE_MAX = 18;
 // grabber, always sent to the nearest slot, never got past the middle of the
 // buffet. Three keeps the line reading as a line while putting enough traffic
 // on the floor that no table stays untouched for long.
-const MAX_CONCURRENT_GRABBERS = 3;
+const MAX_CONCURRENT_GRABBERS = 5;
 // Per second, per queued diner, while a grabber slot is free — a staggered
 // trickle rather than the whole line breaking for the table the instant one
 // opens up.
-const GRAB_CHANCE_PER_SEC = 0.5;
+const GRAB_CHANCE_PER_SEC = 1.5;
 // Post-grab loiter (see DinerState's 'wandering'). Legs are short and start
 // from wherever the diner already is, so a wanderer stays around the buffet
 // where it's a real obstacle, and is gone in a few seconds either way — a
 // long walk would let wanderers fill MAX_ATTENDEES and starve the queue.
+// A diner that can't reach the sandwich it claimed gives up after this long,
+// releases the claim and leaves. Local steering rounds an obstacle, it does
+// not solve a maze, so some trips across a hall full of booths and stair
+// enclosures will simply fail — without this the failures are permanent: a
+// 600s headless run ended with four diners still walking at a table they'd
+// claimed minutes earlier, each holding a sandwich reserved that nobody could
+// then take. Generous enough that an honest walk to the far table (about 40m
+// at APPROACH_SPEED, plus detours) finishes comfortably.
+const GRAB_TIMEOUT = 30;
+// Same reasoning as GRAB_TIMEOUT, for a loiter leg: a wander target is a
+// random point that may well sit inside a table or a booth, and a diner that
+// can never stand on it would otherwise wander for the rest of the run. A
+// 600s headless run had ~11 of the 14 attendees permanently wandering, which
+// starved the queue and cut the buffet's throughput to a third. Timing the
+// leg out just counts it as walked.
+const WANDER_LEG_TIMEOUT = 8;
 const WANDER_LEGS_MIN = 1;
-const WANDER_LEGS_MAX = 3;
+const WANDER_LEGS_MAX = 2;
 const WANDER_LEG_MIN_DISTANCE = 4;
 const WANDER_LEG_MAX_DISTANCE = 10;
 // The band the buffet actually occupies — wander targets are clamped into it
@@ -260,13 +276,16 @@ const HUNGER_MAX = 100;
 // (capped) rather than climbing forever into an unplayable instant-drain.
 //
 // Sped up across the board 2026-09-29 — the user: "level 3 hungry bar goes
-// very slow, almost no need to look at it." It was previously 85s to starve
-// from full, against a run whose other pressure (the chase) is lethal within
-// seconds, so the bar was background noise you could ignore while playing the
-// crowd. At 50s a full bar is about four unhurried sandwiches' worth of time,
-// which is short enough that a player who never detours to the buffet dies of
-// it, and the ramp arrives sooner so the squeeze is felt inside a good run
-// rather than only after one.
+// very slow, almost no need to look at it." The bar was background noise you
+// could ignore while playing the crowd.
+//
+// Note these are *base* rates, not times-to-starve: the drain ramps while you
+// survive, so a full bar empties well before HUNGER_MAX/HUNGER_DRAIN_RATE_BASE
+// seconds. Measured by simulating a run that never eats: the old numbers
+// emptied the bar in 61s, these empty it in 39s, with the low-hunger warning
+// (HUNGER_LOW_THRESHOLD) landing at 31s instead of 48s. Each sandwich buys
+// about 12s early on and about 6s once the ramp is at its cap, so the level's
+// own loop — keep eating — is now a real clock rather than a formality.
 const HUNGER_DRAIN_RATE_BASE = HUNGER_MAX / 50; // per second, at survivedTime = 0
 const HUNGER_DRAIN_RATE_MAX = HUNGER_MAX / 25; // per second, the late-run cap
 const HUNGER_DRAIN_RAMP_DURATION = 70; // seconds to go from base to max
@@ -337,6 +356,14 @@ interface Diner {
   targetSlot: SandwichSlot | null;
   // Remaining post-grab loiter legs, while 'wandering' (see DinerState).
   wanderLegs: number;
+  // Which way round this diner committed to going while detouring (see
+  // headingAvoiding). Reset whenever it picks a new destination, so a fresh
+  // leg isn't steered by a commitment made for the previous one.
+  detour: { side: number };
+  // Seconds left to reach the slot it claimed, while 'grabbing' (see
+  // GRAB_TIMEOUT), or to finish the current loiter leg, while 'wandering'
+  // (see WANDER_LEG_TIMEOUT) — one destination at a time, so one timer.
+  legTimer: number;
   // See checkAndEscapeIfStuck's own comment.
   stuckCheckTimer: number;
   stuckCheckX: number;
@@ -400,6 +427,10 @@ function headingAvoiding(
   targetZ: number,
   radius: number,
   colliders: Collider[],
+  // Which way round this mover committed to going, remembered across frames
+  // (0 = not currently detouring). See the tangent block below for why this
+  // can't be re-decided every frame.
+  detour: { side: number },
 ): number {
   const dx = targetX - x;
   const dz = targetZ - z;
@@ -430,7 +461,10 @@ function headingAvoiding(
     blocker = c;
     blockerAlong = along;
   }
-  if (!blocker) return desired;
+  if (!blocker) {
+    detour.side = 0; // path is clear — any commitment from an earlier detour is spent
+    return desired;
+  }
 
   const relX = blocker.x - x;
   const relZ = blocker.z - z;
@@ -444,10 +478,26 @@ function headingAvoiding(
   // Aim at the blocker's edge rather than its center: offset from the bearing
   // to it by the half-angle its clearance circle subtends, to whichever side
   // we're already leaning, so the diner takes the shorter way around.
+  // Aim at the blocker's edge rather than its center: offset from the bearing
+  // to it by the half-angle its clearance circle subtends.
+  //
+  // Which side to pass on is decided ONCE, on the frame the detour starts,
+  // and held until the way to the target is clear again. Re-deciding it every
+  // frame is what made the first version of this useless against a wall:
+  // every long wall in this game is modelled as a row of circles, so rounding
+  // one circle immediately presents the next, whose "shorter way round" is
+  // back the way you came. Diners sat in that oscillation permanently — a
+  // 600s headless run had four of them stuck against the Stairs A enclosure
+  // for up to 579s, never getting nearer than 15m to the outer tables, while
+  // still holding those tables' sandwiches reserved. Committing to a side
+  // turns the same local rule into wall-following, which does get round.
   const toBlocker = Math.atan2(relX, relZ);
   const tangentOffset = Math.asin(clearance / centerDist);
-  const diff = ((toBlocker - desired + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-  return diff > 0 ? toBlocker - tangentOffset : toBlocker + tangentOffset;
+  if (detour.side === 0) {
+    const diff = ((toBlocker - desired + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    detour.side = diff > 0 ? -1 : 1;
+  }
+  return toBlocker + detour.side * tangentOffset;
 }
 
 function stepToward(
@@ -459,14 +509,16 @@ function stepToward(
   dt: number,
   // Omit to walk a dead-straight line (see headingAvoiding on why 'chasing'
   // does exactly that).
-  avoid?: { radius: number; colliders: Collider[] },
+  avoid?: { radius: number; colliders: Collider[]; detour: { side: number } },
 ): { x: number; z: number; heading: number; arrived: boolean } {
   const dx = targetX - x;
   const dz = targetZ - z;
   const dist = Math.hypot(dx, dz);
   const direct = dist > 0.001 ? Math.atan2(dx, dz) : 0;
   if (dist <= speed * dt) return { x: targetX, z: targetZ, heading: direct, arrived: true };
-  const heading = avoid ? headingAvoiding(x, z, targetX, targetZ, avoid.radius, avoid.colliders) : direct;
+  const heading = avoid
+    ? headingAvoiding(x, z, targetX, targetZ, avoid.radius, avoid.colliders, avoid.detour)
+    : direct;
   return { x: x + Math.sin(heading) * speed * dt, z: z + Math.cos(heading) * speed * dt, heading, arrived: false };
 }
 
@@ -586,6 +638,8 @@ export class LunchRush {
    * direction can't march it into an empty corner of the hall.
    */
   private setWanderTarget(d: Diner): void {
+    d.detour.side = 0;
+    d.legTimer = WANDER_LEG_TIMEOUT;
     const angle = Math.random() * Math.PI * 2;
     const distance = WANDER_LEG_MIN_DISTANCE + Math.random() * (WANDER_LEG_MAX_DISTANCE - WANDER_LEG_MIN_DISTANCE);
     d.targetX = THREE.MathUtils.clamp(d.x + Math.sin(angle) * distance, -WANDER_X_LIMIT, WANDER_X_LIMIT);
@@ -624,6 +678,8 @@ export class LunchRush {
       gripeTimer: GRIPE_INTERVAL_MIN + Math.random() * (GRIPE_INTERVAL_MAX - GRIPE_INTERVAL_MIN),
       targetSlot: null,
       wanderLegs: 0,
+      detour: { side: 0 },
+      legTimer: 0,
       stuckCheckTimer: STUCK_CHECK_INTERVAL,
       stuckCheckX: ATTENDEE_SPAWN_POINT[0],
       stuckCheckZ: ATTENDEE_SPAWN_POINT[1],
@@ -828,14 +884,14 @@ export class LunchRush {
     let activeGrabbers = this.diners.reduce((n, d) => n + (d.state === 'grabbing' ? 1 : 0), 0);
     // Every navigating state except 'chasing' walks around obstacles rather
     // than into them — see headingAvoiding for why chasers are the exception.
-    const avoid = { radius: HAZARD_RADIUS, colliders };
+    const avoidFor = (d: Diner) => ({ radius: HAZARD_RADIUS, colliders, detour: d.detour });
 
     for (const d of this.diners) {
       if (fell) break; // game's over — stop advancing anyone else this frame
 
       switch (d.state) {
         case 'approaching': {
-          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoid);
+          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoidFor(d));
           d.x = step.x;
           d.z = step.z;
           d.heading = step.heading;
@@ -860,6 +916,8 @@ export class LunchRush {
               d.targetSlot = slot;
               d.targetX = slot.x;
               d.targetZ = slot.z;
+              d.detour.side = 0;
+              d.legTimer = GRAB_TIMEOUT;
               activeGrabbers += 1;
               break;
             }
@@ -876,6 +934,18 @@ export class LunchRush {
           break;
         }
         case 'grabbing': {
+          d.legTimer -= dt;
+          if (d.legTimer <= 0) {
+            // Couldn't get there — drop the claim so the sandwich is free for
+            // someone who can, and go home. See GRAB_TIMEOUT.
+            d.targetSlot = null;
+            activeGrabbers -= 1;
+            d.state = 'leaving';
+            d.detour.side = 0;
+            d.targetX = ATTENDEE_SPAWN_POINT[0];
+            d.targetZ = ATTENDEE_SPAWN_POINT[1];
+            break;
+          }
           // Steers at the slot's exact coordinates, same as 'approaching',
           // but "arrives" as soon as it's within GROUND_REACH_RADIUS rather
           // than reaching the literal point — the table's own collider (see
@@ -904,10 +974,11 @@ export class LunchRush {
             // Sandwich in hand, now drift around the buffet for a leg or two
             // before heading out — see DinerState's 'wandering'.
             d.state = 'wandering';
+            d.detour.side = 0;
             d.wanderLegs = WANDER_LEGS_MIN + Math.floor(Math.random() * (WANDER_LEGS_MAX - WANDER_LEGS_MIN + 1));
             this.setWanderTarget(d);
           } else {
-            const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoid);
+            const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoidFor(d));
             d.x = step.x;
             d.z = step.z;
             d.heading = step.heading;
@@ -915,11 +986,12 @@ export class LunchRush {
           break;
         }
         case 'wandering': {
-          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoid);
+          d.legTimer -= dt;
+          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, APPROACH_SPEED, dt, avoidFor(d));
           d.x = step.x;
           d.z = step.z;
           d.heading = step.heading;
-          if (step.arrived) {
+          if (step.arrived || d.legTimer <= 0) {
             d.wanderLegs -= 1;
             if (d.wanderLegs > 0) {
               this.setWanderTarget(d);
@@ -963,7 +1035,7 @@ export class LunchRush {
           break;
         }
         case 'leaving': {
-          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, LEAVE_SPEED, dt, avoid);
+          const step = stepToward(d.x, d.z, d.targetX, d.targetZ, LEAVE_SPEED, dt, avoidFor(d));
           d.x = step.x;
           d.z = step.z;
           d.heading = step.heading;
