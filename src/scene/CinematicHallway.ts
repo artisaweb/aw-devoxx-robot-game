@@ -70,6 +70,7 @@ const DEFAULT_PALETTE: HallwayPalette = {
 const PILLAR_SPACING = 18; // matches the prototype's own spacing
 const TABLE_SPACING = 6;
 const DOOR_WIDTH = 4;
+const ROOM_PANEL_WIDTH = 5.5; // the red room-number backdrop, shared by the closed door fronts and the open doorway
 const DOOR_CLEARANCE_Z = 4.5; // furniture skips within this of any door's own z, same as the prototype
 
 // Collider radii for the furniture/kiosk props below — sized to each prop's
@@ -473,6 +474,7 @@ export class CinematicHallway extends THREE.Group {
     // exactly the gap that let the hallway show through above the old
     // door-height frame from deep inside the room.
     const postMat = new THREE.MeshStandardMaterial({ color: this.palette.doorFrame });
+    const panelHeight = this.ceilingHeight * 0.7 * 0.85;
     allSlots.forEach((slot) => {
       const open = findOpen(slot);
       if (!open) return;
@@ -487,6 +489,26 @@ export class CinematicHallway extends THREE.Group {
       const light = new THREE.PointLight(0xffffff, 1.2, 10);
       light.position.set(slot.x + inward * 2, open.height * 0.6, slot.z);
       this.add(light);
+
+      // The same red numbered backdrop its closed neighbours carry, set
+      // beside the opening instead of across it — the door itself has to stay
+      // walkable, but the room still has to say which room it is. On the +z
+      // flank because that's the side you see it from: the floor's spawn is
+      // at the hall's +z end facing -z, so you walk past this panel on the
+      // approach rather than only seeing it once you're level with the gap.
+      // 0.6 clear of the gap, not a token gap: the flanking post above is
+      // 0.5 deep and centred at halfDoorWidth + 0.25, so it reaches
+      // halfDoorWidth + 0.5 — anything tighter and the panel's near edge
+      // ends up inside the post's own box, z-fighting through it.
+      const panel = this.createRoomNumberPanel(this.roomNumberForSlot(slot));
+      panel.position.set(slot.x + inward * 0.3, panelHeight / 2, slot.z + halfDoorWidth + 0.6 + ROOM_PANEL_WIDTH / 2);
+      panel.rotation.y = (inward * Math.PI) / 2;
+      this.add(panel);
+      // Matching the closed doors' own panel light, so the two read as the
+      // same signage rather than one lit and one flat.
+      const panelLight = new THREE.PointLight(0xff3344, 1, 8);
+      panelLight.position.set(slot.x + inward * 1.5, panelHeight * 0.7, panel.position.z);
+      this.add(panelLight);
     });
   }
 
@@ -496,10 +518,35 @@ export class CinematicHallway extends THREE.Group {
     return slot.side === 'left' ? 3 + idx : 10 - idx;
   }
 
+  /**
+   * The red room-number backdrop, numeral bleeding off the top — same read as
+   * the real venue's room-number signage. Emissive (not just lit), same
+   * convention as the fabric pillars above: a plain lit material reads as
+   * flat black in this hallway's near-zero ambient light.
+   *
+   * One builder shared by the closed door fronts and Room 4's open doorway, so
+   * a room you can actually walk into still announces itself as the same kind
+   * of room as its closed neighbours (the user: "make sure this door is
+   * visually the same as the other doors, the others are marked with the room
+   * number, this one is not").
+   */
+  private createRoomNumberPanel(num: number): THREE.Mesh {
+    const panelHeight = this.ceilingHeight * 0.7 * 0.85;
+    const numTexture = createRoomNumberTexture(num);
+    const backdropMat = new THREE.MeshStandardMaterial({
+      map: numTexture,
+      emissive: 0xffffff,
+      emissiveMap: numTexture,
+      emissiveIntensity: 0.5,
+      roughness: 0.85,
+    });
+    return new THREE.Mesh(new THREE.PlaneGeometry(ROOM_PANEL_WIDTH, panelHeight), backdropMat);
+  }
+
   private buildRoomSignage(closedSlots: { x: number; z: number; side: 'left' | 'right' }[]): void {
     const wallHeight = this.ceilingHeight * 0.7;
     const panelHeight = wallHeight * 0.85;
-    const panelWidth = 5.5;
+    const panelWidth = ROOM_PANEL_WIDTH;
     const doorSignTexture = getDoorSignTexture();
     const kioskTexture = getKioskScreenTexture();
 
@@ -508,19 +555,7 @@ export class CinematicHallway extends THREE.Group {
       const num = this.roomNumberForSlot(slot);
       const group = new THREE.Group();
 
-      // Red backdrop panel, numeral bleeding off the top — same read as the
-      // real venue's room-number signage. Emissive (not just lit), same
-      // convention as the fabric pillars above — a plain lit material reads
-      // as flat black in this hallway's near-zero ambient light.
-      const numTexture = createRoomNumberTexture(num);
-      const backdropMat = new THREE.MeshStandardMaterial({
-        map: numTexture,
-        emissive: 0xffffff,
-        emissiveMap: numTexture,
-        emissiveIntensity: 0.5,
-        roughness: 0.85,
-      });
-      const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(panelWidth, panelHeight), backdropMat);
+      const backdrop = this.createRoomNumberPanel(num);
       // Clears the solid wall's own face (the wall box extends to slot.x +
       // inward*0.25) — any closer and the panel sits inside the wall's own
       // geometry, invisible from the corridor.
