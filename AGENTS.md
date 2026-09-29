@@ -35,7 +35,9 @@ Debug entry points (gated to `isLocalHost()`, see `src/util/env.ts` — ignored 
 
 ### Two floors, joined by door teleports, not visible geometry
 
-`Floor = 'ground' | 'first'` (`src/scene/ExhibitionHall.ts`). The two levels' maps are not architecturally connected — the real venue's stairwell between them is behind closed doors the player never sees, so a walk-up-to-either-side door teleport (`DoorLink`) swaps floors instantly instead of modeling a staircase. This means the two floors can have entirely separate visual identities and don't need to line up spatially. When adding anything level-transition-related, look for the door/teleport pattern rather than a ramp or connecting corridor.
+`Floor = 'ground' | 'first'` (`src/scene/ExhibitionHall.ts`). The two levels' maps are not architecturally connected — the real venue's stairwell between them is behind closed doors the player never sees, so the floors are joined by a closed door rather than modelled connecting geometry. This means they can have entirely separate visual identities and don't need to line up spatially.
+
+Nothing teleports the player between floors: the level transitions do it, via `Game.ts`'s `advanceToLevel2()`/`advanceToLevel3()`, which call `robot.setMap(floor, spawn)` and swap which floor group is visible. A `DoorLink`/`findDoorTeleport` mechanism existed but was never called and was removed (2026-09-29). Every visible stair and door in the game — the ground-floor enclosures, Stair C at the corridor's far end, the two mid-corridor stairwells — is real geometry that dead-ends at a closed door. When adding anything level-transition-related, change the transition in `Game.ts`; don't reach for a ramp, a connecting corridor, or a teleport trigger.
 
 ### Collision: `Collider[]`, clearance derived from the mover
 
@@ -46,13 +48,15 @@ Debug entry points (gated to `isLocalHost()`, see `src/util/env.ts` — ignored 
 
 `height` on a `Collider` makes it only block at or below that y (a booth desk's sides, not its top once you've jumped up); `robotOnly` colliders (Room 4's row walls) apply to the player's own movement but are stripped out before being passed to a level's hazard-update loop (see `firstFloorHazardColliders` in `Game.ts`) — hazards climb every row freely, the robot must jump each one.
 
+Sponsor booths live one-per-file in `src/scene/booths/` over a shared `shared.ts` (material shorthand, the rotate-into-place pair, the name-sign texture). `sponsorBooths.ts` stays the entry point: it keeps `getBoothColliders`, `createSponsorBooths` and the beer tap, and re-exports `KING_KIOSK_POS`.
+
 ### Text content lives in `src/text/`, not inline in gameplay code
 
 Dialogue, HUD copy, knowledge quotes, robot toasts, and signage each have their own file in `src/text/` and are imported by the gameplay/UI code that displays them. When editing jokes, toasts, or any player-facing copy, edit these files, not the engine files that call them.
 
 ### Procedural props vs. GLTF models
 
-`src/props/*.js` (+ hand-written `.d.ts` companions) are procedurally-generated Three.js geometry (beer tap, vending/candy machines, event furniture, sandwiches) — no external model files. `public/models/*.glb` are the three robots' real rigged models/animation clips (AI-generated, loaded via `voxxyModel.ts`'s `loadRobotAsset`). A `Sprite` added to `groundFloorGroup` or `sponsorBoothsGroup` must set `raycast = () => {}` — `FollowCamera`'s occlusion raycast against those groups otherwise hits the sprite and blacks out the screen.
+`src/props/*.js` (+ hand-written `.d.ts` companions) are procedurally-generated Three.js geometry (beer tap, vending/candy machines, event furniture, sandwiches, the DEVOXX letters) — no external model files. `public/models/*.glb` are the three robots' real rigged models/animation clips (AI-generated, loaded via `voxxyModel.ts`'s `loadRobotAsset`). A `Sprite` added to `groundFloorGroup` or `sponsorBoothsGroup` must set `raycast = () => {}` — `FollowCamera`'s occlusion raycast against those groups otherwise hits the sprite and blacks out the screen.
 
 ### `private/` is local-only, not part of the repo
 
