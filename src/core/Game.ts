@@ -5,6 +5,7 @@ import {
   getColumnColliders,
   getBoothPlatformColliders,
   getAuditoriumRowWallColliders,
+  getAuditoriumStageColliders,
   getHallwayPropColliders,
   updateAuditoriumScreen,
   getFirstFloorHeightAt,
@@ -121,6 +122,13 @@ export class Game {
     // attendees should route around too, so they stay in
     // firstFloorHazardColliders below.
     ...getDevoxxLetterColliders('first'),
+    // Room 4's stage, height-gated at its own top face (see
+    // getAuditoriumStageColliders) — without this the stage has a walkable
+    // top surface but nothing stopping you walking into it, and
+    // getFirstFloorHeightAt would pop the robot 0.4m up onto the deck
+    // unasked. Level 2's attendees ignore Collider.height, so the same
+    // entries block them at every height: the podium is a real refuge.
+    ...getAuditoriumStageColliders(),
   ];
   private firstFloorHazardColliders: Collider[] = this.firstFloorColliders.filter((c) => !c.robotOnly);
   // Same ground floor as Level 1 (columns + booths), plus KING's candy
