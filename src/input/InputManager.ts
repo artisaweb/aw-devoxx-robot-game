@@ -13,10 +13,6 @@ export class InputManager {
     return this.down.has(code);
   }
 
-  hasAnyKeyDown(): boolean {
-    return this.down.size > 0;
-  }
-
   /** Snapshot of every key currently held — for callers that need to diff frame-to-frame (e.g. detecting a fresh "any key" press without re-triggering on a key that was already held before). */
   downKeys(): ReadonlySet<string> {
     return this.down;

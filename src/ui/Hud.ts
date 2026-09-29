@@ -6,6 +6,7 @@ import {
   timeRemainingLabel,
   survivedLabel,
   LEVEL_INTROS,
+  INTRO_START_HINT,
   fellMessageFallback,
   allCollectedMessage,
   timeUpMessage,
@@ -400,11 +401,13 @@ export class Hud {
   /**
    * Populates and (re-)shows the intro/controls panel for `level` — called at
    * the start of every level, not just the very first, and left showing
-   * (`pointer-events: none`, doesn't block play) until hideIntro() fires on
-   * the player's first keypress (see Game.ts). Used to be a short two-line
-   * banner that auto-faded after 2.6s for Levels 2-3 (see LEVEL_INTROS's own
-   * comment for why that changed). Never actually removes introEl from the
-   * DOM (hideIntro() above just fades it) so it's always there to re-show.
+   * until hideIntro() fires on the player's first *control* keypress (see
+   * Game.ts's `awaitingStart`, which holds the level frozen for exactly as
+   * long as this panel is up, so the briefing can be read without the timer
+   * already draining behind it). Used to be a short two-line banner that
+   * auto-faded after 2.6s for Levels 2-3 (see LEVEL_INTROS's own comment for
+   * why that changed). Never actually removes introEl from the DOM
+   * (hideIntro() above just fades it) so it's always there to re-show.
    */
   showIntro(level: 1 | 2 | 3): void {
     const { title, description, controls } = LEVEL_INTROS[level];
@@ -412,6 +415,7 @@ export class Hud {
       <div style="font-size: 28px; font-weight: 700; margin-bottom: 8px;">${title}</div>
       <div style="font-size: 18px; margin-bottom: 16px;">${description}</div>
       <div style="font-size: 16px; opacity: 0.9;">${controls}</div>
+      <div style="font-size: 16px; font-weight: 700; margin-top: 16px;">${INTRO_START_HINT}</div>
     `;
     this.introHidden = false;
     this.introEl.style.opacity = '1';
