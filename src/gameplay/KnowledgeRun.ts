@@ -51,7 +51,7 @@ const QUOTE_DEFS: { pos: [number, number]; quoteId: KnowledgeQuoteId }[] = [
   { pos: [-10, 5], quoteId: 'debugging-detective' }, // hall
   { pos: [-13, -25], quoteId: 'java-write-debug' }, // hall
   { pos: [-10, -85], quoteId: 'ai-code-review' }, // hall
-  { pos: [-13, -115], quoteId: 'sql-join' }, // hall, near Stair C end
+  { pos: [-13, -115], quoteId: 'undocumented-feature' }, // hall, near Stair C end
   { pos: [-48, -23], quoteId: 'kubernetes-cluster' }, // Room 4, flat apron near the screen — no jump needed
   { pos: [-49.3, -16.55], quoteId: 'microservice-monolith' }, // Room 4, row 0 (1 jump deep)
   { pos: [-46.7, -11.97], quoteId: 'cloud-other-computer' }, // Room 4, row 2 (3 jumps deep)

@@ -1,15 +1,12 @@
 import * as THREE from 'three';
 import { createFoldingTable, createEventChair } from '../props/eventFurniture';
 
-// Refactored from an earlier standalone prototype into a reusable,
-// configurable class instead of a standalone window.onload script —
-// see its own constructor options below
-// for what "configurable" covers. Pure presentation: this file has no
-// Collider/game-state imports at all, and doesn't know which (if any) of its
-// door slots has a real room behind it. ExhibitionHall.ts owns those
-// decisions and the numbers that drive them; this class just draws what it's
-// told to, the same "caller decides the numbers, this just builds geometry"
-// split every other zone in that file already follows.
+// Pure presentation: this file has no Collider/game-state imports at all, and
+// doesn't know which (if any) of its door slots has a real room behind it.
+// ExhibitionHall.ts owns those decisions and the numbers that drive them;
+// this class just draws what it's told to, the same "caller decides the
+// numbers, this just builds geometry" split every other zone in that file
+// already follows.
 
 export interface HallwayDoorGap {
   side: 'left' | 'right';
