@@ -100,13 +100,19 @@ const PICKUP_Y_TOLERANCE = 0.4;
 // the bigger map plus tougher, more numerous hazards (able to chase into a
 // room) is what makes this level harder, not a tighter timer.
 //
-// Ten hazards total: six sit in the hall corridor (x=-13); the other four are
-// seeded natively in each of the four rooms, a few meters off that room's own
-// zone center (the same point ROOM_WAYPOINTS uses below as a navigation
-// target) so a fresh spawn doesn't land on top of that room's own nugget
-// mesh. Seeding one hazard per room guarantees exposure on entry rather than
-// relying purely on a wandering hazard drifting in by chance
-// (ROOM_VISIT_CHANCE, 40% per leg).
+// Seven hazards: six down the hall corridor (x=-13), plus one seeded inside
+// Room 4 a few meters off its zone center, so entering the room guarantees
+// exposure rather than relying on a wanderer drifting in (ROOM_VISIT_CHANCE,
+// 40% per leg).
+//
+// There were ten until 2026-09-29, one per auditorium — but only Room 4 was
+// ever built, so the entries for rooms 5, 8 and 9 sat outside every zone in
+// FIRST_FLOOR_ZONES. Measured: those three never moved a single centimetre in
+// a full round, because every candidate step failed the isOnFirstFloor check
+// and bounced them in place. The level has therefore always played with seven.
+// Removing them changes nothing a player can see and drops three frozen
+// meshes from under the floor. If the other rooms ever get built, re-add one
+// spawn each here.
 const HAZARD_START: [number, number, number, AttendeeArchetype][] = [
   [-13, 20, 3.4, 'live-coder'],
   [-13, -10, 1.0, 'keynote-legend'],
@@ -115,9 +121,6 @@ const HAZARD_START: [number, number, number, AttendeeArchetype][] = [
   [-13, -100, 2.2, 'live-coder'],
   [-13, -130, 4.1, 'keynote-legend'],
   [-45, -15, 1.7, 'booth-recruiter'], // Room 4, native to the room instead of just passing through
-  [6, -24, 4.2, 'java-godfather'], // Room 9 (Room 4's mirror door slot)
-  [-28, -54, 0.8, 'live-coder'], // Room 5's door slot
-  [6, -54, 3.9, 'keynote-legend'], // Room 8's door slot (Room 5's mirror)
 ];
 const HAZARD_RADIUS = 1.0;
 const HAZARD_WANDER_SPEED = 2.4; // above Level 1's 2.2
