@@ -1993,18 +1993,28 @@ function buildAuditorium(
   }
 
   // The DEVOXX letters (see addDevoxxLetters) facing the seats — the third of
-  // the three spots the same set gets reused in. Standing on the apron floor
-  // right in front of the stage rather than up on its deck: the stage slab
-  // itself has no collider (it's scenery behind where the level is actually
-  // played), so letters on top of it would be the one arrangement that reads
-  // wrong in motion — a robot walking clean through the stage but bouncing
-  // off lettering apparently floating 40cm above its own feet. On the floor,
-  // the collision and the picture agree, and at gameplay camera distance it's
-  // the same silhouette keynote_hi_3s.jpg shows.
+  // the three spots the same set gets reused in, and now up on the stage deck
+  // where the real ones stand (keynote_hi_3s.jpg).
+  //
+  // They sat on the apron floor until the stage became a real platform
+  // (STAGE_HEIGHT), because a robot walking clean through the stage while
+  // bouncing off lettering apparently floating 40cm above its own feet was
+  // the one arrangement that read wrong in motion. Now the deck is solid and
+  // standable, so the collision and the picture agree up here too: jump onto
+  // the podium and the letters are objects you walk around, not scenery you
+  // pass through.
+  //
+  // Their colliders carry no `height`, unlike the stage's own, so they block
+  // at every level — which is right: at floor level the stage already blocks
+  // this footprint, and once you're up on the deck the letters should still
+  // be solid. Nothing can jump over them either; they stand 1.5m on a 0.4m
+  // deck, well past the ~1.36m jump.
   addDevoxxLetters(group, firstFloorLetterColliders, {
-    x: zone.x,
-    y,
-    z: stage.position.z + stageDepth / 2 + 0.4,
+    x: stageSpec.x,
+    y: stageSpec.topY,
+    // Toward the deck's front edge rather than its middle, so they read
+    // against the screen from the seats instead of hugging the back wall.
+    z: stageSpec.z + stageSpec.halfD * 0.35,
     rotationY: 0,
   });
 
