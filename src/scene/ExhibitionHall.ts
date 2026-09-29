@@ -1862,42 +1862,6 @@ function createStairScreenTexture(): THREE.CanvasTexture {
   return texture;
 }
 
-// Room 4's own identity panel, on the solid side wall straight ahead as you
-// walk in through the entrance gap — the same red backdrop with a numeral
-// bleeding off the top that the corridor's 7 closed doors already carry
-// (CinematicHallway's createRoomNumberTexture), plus the event wordmark
-// underneath it. Deliberately a second, local copy rather than an export
-// from that file: the corridor's version is a door-front prop sized and
-// cropped for a 5.5m panel seen edge-on in passing, this one is a wall
-// graphic read head-on from across the room, and the two want different
-// crops of the same idea.
-function createAuditoriumRoomPanelTexture(num: number): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 640;
-  const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#c81e2c';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#f2f2f2';
-  // Oversized numeral bleeding off the top edge, same crop as the corridor
-  // panels — it reads as signage rather than as a centered poster.
-  ctx.textBaseline = 'alphabetic';
-  ctx.font = '900 620px "Arial Narrow", Arial, sans-serif';
-  ctx.fillText(String(num), canvas.width / 2, canvas.height * 0.82);
-  // Wordmark along the bottom, on its own darker band so it stays legible
-  // against the red.
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(0, canvas.height * 0.84, canvas.width, canvas.height * 0.16);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '900 86px "Arial Narrow", Arial, sans-serif';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(EVENT_SIGNAGE.wordmark, canvas.width / 2, canvas.height * 0.92);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
 // The branded flight case parked beside the AV table at the stage's edge, per
 // room7-signage-screen-red-wall.jpg — a small, real detail of a dressed
 // conference stage rather than an invented one.
@@ -2223,7 +2187,6 @@ function buildAuditorium(
   group: THREE.Group,
   zone: RaisedZone,
   entranceSide: 'left' | 'right',
-  roomNumber: number,
   y: number,
   mats: AuditoriumMats,
 ): void {
@@ -2399,31 +2362,13 @@ function buildAuditorium(
   crateGroup.add(crateLabel);
   group.add(crateGroup);
 
-  // Room identity panel on the solid side wall, straight ahead as you come
-  // through the entrance gap (which sits on the opposite wall at
-  // entranceCenterZ) — the first thing the room tells you about itself, and
-  // the same red-backdrop-with-a-bleeding-numeral language the corridor's own
-  // door signage already speaks. Emissive for the same reason that signage
-  // is: a plain lit material reads as flat black in a blacked-out cinema.
-  const roomPanelTexture = createAuditoriumRoomPanelTexture(roomNumber);
-  const roomPanelMat = new THREE.MeshStandardMaterial({
-    map: roomPanelTexture,
-    emissive: 0xffffff,
-    emissiveMap: roomPanelTexture,
-    emissiveIntensity: 0.5,
-    roughness: 0.9,
-  });
-  const roomPanelWidth = 6;
-  const roomPanel = new THREE.Mesh(new THREE.PlaneGeometry(roomPanelWidth, roomPanelWidth * 1.25), roomPanelMat);
-  // 0.3 clear of the wall box's own face (0.5 thick, centered on solidX), the
-  // same margin the corridor's panels use to avoid sinking into their wall.
-  const panelInward = entranceSide === 'left' ? -1 : 1;
-  roomPanel.position.set(solidX + panelInward * 0.3, y + 4.6, entranceCenterZ);
-  roomPanel.rotation.y = (panelInward * Math.PI) / 2;
-  group.add(roomPanel);
-  const roomPanelLight = new THREE.PointLight(0xff3344, 2, 12);
-  roomPanelLight.position.set(solidX + panelInward * 2, y + 4.6, entranceCenterZ);
-  group.add(roomPanelLight);
+  // No room-number panel in here. It used to hang on the solid side wall
+  // facing the entrance, which put the room's own number on the wall opposite
+  // its door and visible through the doorway from the corridor — reading as
+  // signage for the hall rather than for the room (the user: "the room number
+  // is being used for whatever reason at the other side of the room"). It now
+  // lives where every other room's does, beside the doorway itself
+  // (CinematicHallway's createRoomNumberPanel).
 
   // Real per-row stadium seating: every single row gets its own riser (see
   // ROW_RISE's own comment) — no grouping into flat multi-row plateaus. Seat
@@ -2649,7 +2594,16 @@ export function createFirstFloor(): THREE.Group {
     // Keep the approach to both stairwells free — a fabric pillar or a table
     // planted in the side strip would otherwise stand square in front of the
     // opening (the furniture row sits only 2.4m off the wall).
-    clearZones: [{ z: SIDE_STAIR_Z - hall.z, halfZ: SIDE_STAIR_HALF_WIDTH }],
+    clearZones: [
+      { z: SIDE_STAIR_Z - hall.z, halfZ: SIDE_STAIR_HALF_WIDTH },
+      // Room 4's doorway needs the same treatment: the pillar row's own
+      // spacing landed one lit pillar 2m off the doorway's centre, square in
+      // the walk-in line (the user: "remove the lamp in front of the cinema
+      // room door"). Sized to the walkable gap itself, not the much wider
+      // wall opening above — the pillar's own half-width is added by
+      // isInClearZone, so this only ever drops the one pair standing in it.
+      { z: HALLWAY_DOOR_Z_POSITIONS[1], halfZ: AUDITORIUM_ENTRANCE_GAP_HALF },
+    ],
     // Every pillar lit, not just every other pair (the user: "some pilars are
     // not lighting up") — at only 10 pillar pairs total in this hall, 20
     // live lights is well within budget; the density knob stays configurable
@@ -2725,10 +2679,10 @@ export function createFirstFloor(): THREE.Group {
 
   // Room 4 — the one real, big, walkable auditorium (see the DECIDED note by
   // ROOM4_ZONE above). Entrance faces the hall, on Room 4's right/east side.
-  // Room number 4 matches CinematicHallway's own roomNumberForSlot() for this
-  // slot (left side, 2nd door: 3 + 1) — the corridor's signage and the room's
-  // own have to agree about which room you just walked into.
-  buildAuditorium(group, room4, 'right', 4, y, auditoriumMats);
+  // No room number passed in: the "4" is signage on the corridor side of the
+  // doorway, derived from the floor plan by CinematicHallway's own
+  // roomNumberForSlot(), so there's no second place for it to disagree with.
+  buildAuditorium(group, room4, 'right', y, auditoriumMats);
 
   // The mid-corridor stairs down, through the wall gaps opened above.
   for (const stair of SIDE_STAIRS) buildSideStair(group, stair);
