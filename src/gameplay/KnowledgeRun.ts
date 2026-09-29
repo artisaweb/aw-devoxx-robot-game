@@ -46,18 +46,40 @@ import { KNOWLEDGE_QUOTES, KnowledgeQuoteId } from '../text/knowledgeQuotes';
 // (the aisle's own left/right safe margin for Room 4, the corridor's clear
 // width for the hall) instead of sitting on one exact line, per his earlier
 // "spread across the map, not one line" ask.
+//
+// Re-spread again 2026-09-29 (the user: "level 2 knowledge bubbles need to be
+// spread a lot more"), to 7 hall / 5 Room 4. Two things were actually wrong:
+//
+//  - The hall used barely half its own length. The corridor runs z -139..41,
+//    but the five positions sat between z 30 and -115 with a 60m dead stretch
+//    between z -25 and -85 — the longest walk in the level had nothing in it.
+//    The seven now reach from the Stairs A/B arrival to the Stair C end, and
+//    swing across the corridor's full clear width (x -18..-8, inset from the
+//    -20..-6 walkable edges by MOVER_CLEARANCE) rather than the old ±3m
+//    wobble around the centerline.
+//  - Room 4 held 7 of the 12 inside a 2.8m-wide column. That column is not a
+//    mistake to widen: it's the central aisle (aisleHalf 1.4 in
+//    buildAuditorium), and every metre either side of it is seating, so a
+//    nugget out there could only be collected by walking through chairs.
+//    Spreading Room 4 means thinning it, not widening it — two quotes moved
+//    out to the empty corridor, and the remaining five re-spaced over the
+//    same full row-0-to-back-row climb so the jump-gated progression keeps
+//    its depth (the deepest nugget is still the back row, 16 jumps in).
+//
+// Room 4 z values are row centers, from row r = -16.55 + r * ROW_DEPTH
+// (ROW_DEPTH 2.294, derived in ExhibitionHall.ts).
 const QUOTE_DEFS: { pos: [number, number]; quoteId: KnowledgeQuoteId }[] = [
-  { pos: [-16, 30], quoteId: 'stream-single-use' }, // hall, near Stairs A/B end
-  { pos: [-10, 5], quoteId: 'debugging-detective' }, // hall
-  { pos: [-13, -25], quoteId: 'java-write-debug' }, // hall
-  { pos: [-10, -85], quoteId: 'ai-code-review' }, // hall
-  { pos: [-13, -115], quoteId: 'undocumented-feature' }, // hall, near Stair C end
+  { pos: [-17, 34], quoteId: 'stream-single-use' }, // hall, right off the Stairs A/B arrival
+  { pos: [-9, 14], quoteId: 'debugging-detective' }, // hall, opposite side of the corridor
+  { pos: [-16, -8], quoteId: 'microservice-monolith' }, // hall, just past Room 4's door
+  { pos: [-8.5, -38], quoteId: 'java-write-debug' }, // hall, in the old dead stretch
+  { pos: [-17.5, -62], quoteId: 'cloud-other-computer' }, // hall, in the old dead stretch
+  { pos: [-9.5, -95], quoteId: 'ai-code-review' }, // hall
+  { pos: [-16, -126], quoteId: 'undocumented-feature' }, // hall, down by the Stair C end
   { pos: [-48, -23], quoteId: 'kubernetes-cluster' }, // Room 4, flat apron near the screen — no jump needed
-  { pos: [-49.3, -16.55], quoteId: 'microservice-monolith' }, // Room 4, row 0 (1 jump deep)
-  { pos: [-46.7, -11.97], quoteId: 'cloud-other-computer' }, // Room 4, row 2 (3 jumps deep)
-  { pos: [-46.7, -2.79], quoteId: 'architecture-legacy' }, // Room 4, row 6 (7 jumps deep)
-  { pos: [-49.3, 6.39], quoteId: 'demo-worked-yesterday' }, // Room 4, row 10 (11 jumps deep)
-  { pos: [-49.3, 15.56], quoteId: 'ai-confident-wrong' }, // Room 4, row 14 (15 jumps deep)
+  { pos: [-49.3, -14.26], quoteId: 'demo-worked-yesterday' }, // Room 4, row 1 (2 jumps deep)
+  { pos: [-46.7, -5.08], quoteId: 'architecture-legacy' }, // Room 4, row 5 (6 jumps deep)
+  { pos: [-49.3, 6.39], quoteId: 'ai-confident-wrong' }, // Room 4, row 10 (11 jumps deep)
   { pos: [-48, 17.4], quoteId: 'technical-debt-loan' }, // Room 4, row 15 — the back row, 16 jumps deep (pulled in slightly from the tier's own raw edge — MOVER_CLEARANCE recesses the walkable zone short of it)
 ];
 const PICKUP_RADIUS = 1.4;
