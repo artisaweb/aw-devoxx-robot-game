@@ -6,7 +6,9 @@ export type SfxName =
   | 'voxxy-shortcircuit'
   | 'droid-thud'
   | 'droid-getup'
-  | 'biggy-fall';
+  | 'biggy-fall'
+  | 'beer-pour'
+  | 'biggy-burp';
 
 const DEFAULT_VOLUME = 0.55;
 

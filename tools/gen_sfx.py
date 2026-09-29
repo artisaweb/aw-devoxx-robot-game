@@ -177,6 +177,23 @@ def metal_clank(dur=0.5, base=310):
     return out
 
 
+def liquid_pour(dur=0.85):
+    """Beer going into a glass. The trick is that the resonant band *climbs*
+    over the pour: the air column above the liquid gets shorter as the glass
+    fills, which is the cue that makes it read as filling rather than as
+    generic running water. Bubbles ride the same curve an octave up."""
+    n = int(dur * SR)
+    f = glide(n, (0, 420), (1, 1150))
+    # The noise bed is lowpassed *before* the resonator and the resonator is
+    # narrow: a wide band here just reads as tap hiss, and the climbing
+    # resonance — the whole point — gets buried under it.
+    body = resonator(lowpass(noise(n), 2200), f, 240) * 5.0
+    splash = highpass(lowpass(noise(n), 5200), 2600) * 0.10
+    bubbles = (rng.random(n) < 70 / SR) * rng.uniform(0.3, 1.0, n)
+    bubbles = resonator(bubbles, f * 2.2, 170) * 3.0
+    return (body + splash + bubbles) * glide(n, (0, 0), (0.05, 1), (0.85, 1), (1, 0))
+
+
 def creak(dur, rate_start, rate_end, pitch=900):
     """Rusty-hinge friction: a train of tiny resonant clicks whose rate wanders
     (stick-slip), like a joint that hasn't been oiled since 2019."""
@@ -337,6 +354,45 @@ def sfx_biggy_fall():
     return place(out, wobble, 0.38)
 
 
+def sfx_beer_pour():
+    # Tap handle, pour, foam settling. Every robot gets this one; Biggy gets
+    # the burp below on top of it.
+    out = np.zeros(1)
+    out = place(out, metal_clank(0.16, base=540) * 0.45, 0.0)
+    out = place(out, liquid_pour(0.85), 0.07)
+    # Foam settling. Two passes of the one-pole lowpass, not one: a single pole
+    # rolls off at only 6 dB/oct, so a nominal 3 kHz cut still leaves enough
+    # 8-10 kHz content for the tail to read as tape hiss rather than as foam.
+    n_foam = int(0.35 * SR)
+    foam = lowpass(lowpass(noise(n_foam), 3000), 3000)
+    foam = highpass(foam, 800) * exp_decay(n_foam, 0.16) * 0.55
+    out = place(out, foam, 0.86)
+    return out
+
+
+def sfx_biggy_burp():
+    # Played after the pour, for Biggy only (the user: "especially when it is
+    # Biggy, a burp is allowed"). A burp is a very low, flutter-modulated
+    # glottal source through a back vowel whose mouth closes as it runs out —
+    # so F1/F2 both fall — with a wet rasp layered on. Ring-modulated at the
+    # end like every other vocal in this file: these are robots, and a
+    # *robotic* rendering of a human noise fits the joke better than an
+    # attempt at a real one.
+    dur = 0.75
+    n = int(dur * SR)
+    f0 = glide(n, (0, 95), (0.2, 78), (0.7, 66), (1, 58))
+    f0 = f0 * (1 + 0.10 * np.sin(2 * np.pi * 22 * t_axis(dur)))  # the flutter
+    src = glottal(f0, jitter=0.03, shimmer=0.25)
+    voice = formants(src, [
+        (glide(n, (0, 560), (1, 430)), 110),
+        (glide(n, (0, 1000), (1, 900)), 180),
+        (2600, 400),
+    ])
+    rasp = resonator(noise(n) * (rng.random(n) < 900 / SR), 300, 200) * 1.2
+    envl = glide(n, (0, 0), (0.03, 1), (0.6, 0.85), (1, 0))
+    return ring_mod((voice * 3 + rasp) * envl, 70, 0.3)
+
+
 SOUNDS = {
     "pickup": sfx_pickup,
     "hit": sfx_hit,
@@ -347,6 +403,8 @@ SOUNDS = {
     "droid-getup": sfx_droid_getup,
     "droid-thud": sfx_droid_thud,
     "biggy-fall": sfx_biggy_fall,
+    "beer-pour": sfx_beer_pour,
+    "biggy-burp": sfx_biggy_burp,
 }
 
 
