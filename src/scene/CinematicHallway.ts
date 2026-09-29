@@ -52,6 +52,15 @@ export interface CinematicHallwayOptions {
    * stairwells.
    */
   clearZones?: { z: number; halfZ: number }[];
+  /**
+   * Local z bands to leave free of tables and chairs only — the fabric pillars
+   * stay. For stretches that should simply read as less cluttered rather than
+   * as an opening being kept walkable: this hall runs 180m with a table pair
+   * every 6m, and the lounge furniture reads as wall-to-wall in the stretches
+   * the player actually spends time in. The pillars are this hall's entire
+   * light source, so clearing those with it would black the stretch out.
+   */
+  furnitureClearZones?: { z: number; halfZ: number }[];
   /** Rectangles cut out of the floor, in local coords — for anything that drops through it, like a stairwell sunk into the hall (see ExhibitionHall's SIDE_STAIRS). Without a hole the floor simply covers the void and the steps sit under a lid. */
   floorHoles?: { x: number; z: number; halfW: number; halfD: number }[];
   palette?: Partial<HallwayPalette>;
@@ -182,6 +191,7 @@ export class CinematicHallway extends THREE.Group {
   private readonly palette: HallwayPalette;
   private readonly openDoorSlots: HallwayOpenDoorSlot[];
   private readonly clearZones: { z: number; halfZ: number }[];
+  private readonly furnitureClearZones: { z: number; halfZ: number }[];
   /** Local x/z/uplight-color of every pillar that got a real light+fixture mesh — populated by buildPillars(), purely for the fixture's own emissive colour (visual only). */
   private litPillarFixtures: { x: number; z: number; color: number }[] = [];
   /** Local x/z of every pillar, lit or not — populated by buildPillars(), read by pillarColliderPositions(). Every pillar gets the same collider regardless of whether it also got a light+fixture. */
@@ -197,6 +207,7 @@ export class CinematicHallway extends THREE.Group {
     this.palette = { ...DEFAULT_PALETTE, ...options.palette };
     this.openDoorSlots = options.openDoorSlots ?? [];
     this.clearZones = options.clearZones ?? [];
+    this.furnitureClearZones = options.furnitureClearZones ?? [];
     const lightDensity = options.lightDensity ?? 0.5;
     const wallGaps = options.wallGaps ?? [];
 
@@ -221,7 +232,8 @@ export class CinematicHallway extends THREE.Group {
     const slots: number[] = [];
     for (let z = -this.halfLength + TABLE_SPACING; z <= this.halfLength - TABLE_SPACING; z += TABLE_SPACING) {
       const nearDoor = this.doorZPositions.some((dz) => Math.abs(z - dz) < DOOR_CLEARANCE_Z);
-      if (!nearDoor && !this.isInClearZone(z, 0)) slots.push(z);
+      const decluttered = this.furnitureClearZones.some((c) => Math.abs(z - c.z) < c.halfZ);
+      if (!nearDoor && !decluttered && !this.isInClearZone(z, 0)) slots.push(z);
     }
     return slots;
   }
