@@ -33,13 +33,27 @@ export function survivedLabel(seconds: number): string {
 }
 
 /**
+ * Shown at the bottom of every intro panel — load-bearing, not decoration:
+ * the level genuinely doesn't start until a control key is pressed (see
+ * Game.ts's `awaitingStart`), so without this line a player who taps Enter
+ * or Escape sees a frozen world and reads it as broken. Says "movement key"
+ * rather than "any key" because only the movement/boost/jump keys actually
+ * start the run — the level-finished screen's own "press any key" prompt
+ * (LEVEL_COPY.nextPrompt) is a different screen with different rules.
+ */
+export const INTRO_START_HINT = 'Press a movement key to start';
+
+/**
  * Per-level intro panel (see Hud.ts's showIntro()) — title/description/
  * controls shown at the start of every level, not just the very first
  * (used to be a short two-line banner that auto-faded after 2.6s for
  * Levels 2-3; the user: "keep this shown until any key is pressed," same as
  * Level 1 already did, and fill in details that had gone missing — Biggy's
  * hunger bar and the fact that a fall now takes 3 close-together hits, not
- * one). Note the `&#10;` line breaks in `controls` — these pair with the
+ * one). Since 2026-09-29 the panel is dismissed by a *control* key rather
+ * than any key, and the level stays frozen until then (see INTRO_START_HINT
+ * above and Game.ts's `awaitingStart`) — the user: "the game is already
+ * running while reading the text." Note the `&#10;` line breaks in `controls` — these pair with the
  * panel's `white-space: pre-line` CSS, not a literal `\n`.
  */
 export const LEVEL_INTROS: Record<1 | 2 | 3, { title: string; description: string; controls: string }> = {

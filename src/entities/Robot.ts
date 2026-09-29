@@ -845,6 +845,30 @@ export class Robot {
     return this.mesh.position;
   }
 
+  /**
+   * Animation-only tick, for the frames where the game is deliberately not
+   * running yet — the intro panel is up and Game.ts is waiting for the
+   * player's first control key (see its `awaitingStart`). Keeps the idle
+   * clip playing (a hard freeze reads as a hang, and a just-swapped GLTF
+   * would otherwise sit in its T-pose until the first gameplay frame) and
+   * clears any leftover stun tint, but deliberately touches none of
+   * update()'s timers: spawn invincibility is set at every level transition
+   * and has to start counting when play does, not while the player is still
+   * reading the briefing.
+   */
+  updateIdle(dt: number): void {
+    this.playAction('idle');
+    // Same no-idle-clip fallback as update()'s own idle branch.
+    if (!this.actions.idle) this.actions.walk?.setEffectiveTimeScale(0);
+    for (const part of this.tintableParts) {
+      const material = part.mesh.material as THREE.MeshStandardMaterial;
+      material.color.copy(part.baseColor);
+      material.transparent = false;
+      material.opacity = 1;
+    }
+    this.mixer?.update(dt);
+  }
+
   update(dt: number, input: InputManager, colliders: Collider[]): void {
     let move = 0;
     let boosting = false;

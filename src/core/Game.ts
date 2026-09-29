@@ -35,6 +35,19 @@ const BEST_SCORE_KEY = 'dayAtDevoxx.bestScore';
 // Seconds remaining at which the timer-low SFX fires (Levels 1-2 only —
 // Level 3 has no timer). One-shot on crossing this, not a per-second replay.
 const TIMER_LOW_THRESHOLD = 5;
+// The keys that start a level from its intro panel — exactly the movement/
+// boost/jump keys Robot.update() itself reads, nothing else. A control key
+// rather than literally any key (the user: "would pause the game until the
+// first control key is pushed"): the level is genuinely frozen while the
+// briefing is up, so Escape/Enter/a stray modifier shouldn't drop the player
+// into a running round they weren't looking at yet. Kept in sync by hand with
+// Robot.update()'s own isDown() calls — there's no shared key map to derive it
+// from, and the intro panel's copy (INTRO_START_HINT) names these too.
+const START_KEYS = [
+  'KeyW', 'KeyA', 'KeyS', 'KeyD',
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  'ShiftLeft', 'ShiftRight', 'Space',
+];
 
 // Three sequential single-robot levels, not one shared world — Level 1 is
 // Voxxy's Swag Run on the ground floor, Level 2 is Droid's Knowledge Run on
@@ -118,8 +131,18 @@ export class Game {
   private lunchRun: LunchRush | undefined;
   private hud: Hud;
   // Last frame's held-key snapshot — lets tick() detect a genuinely fresh
-  // "any key" press (see its own comment) instead of one specific key.
+  // press (see the awaitingStart and finished branches' own comments) rather
+  // than a key that was already held when the screen in question appeared.
   private prevDownKeys: ReadonlySet<string> = new Set();
+  // True while a level's intro panel is up and the level itself is frozen —
+  // nothing but ambient animation runs, so the timer isn't already draining
+  // and the hazards aren't already closing in while the player reads the
+  // briefing (the user: "the game is already running while reading the
+  // text"). Cleared by the first fresh START_KEYS press in tick(). Set at
+  // every point that calls hud.showIntro(), which is every level start
+  // including the very first — hence `true` here, not just in the
+  // transitions.
+  private awaitingStart = true;
   // Voxxy's and Droid's final scores, captured at each level hand-off since
   // their runs get torn down before the day ends — Biggy's is read live from
   // lunchRun.score instead, since nothing tears that down until the day
@@ -228,6 +251,7 @@ export class Game {
     // a spawn-time hit costs exactly as much recovery time as a mid-round one.
     this.robot.setInvincible(TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE);
     this.hud.showIntro(2);
+    this.awaitingStart = true;
   }
 
   /** Level 2 finished → tear it down, load Level 3 (Biggy, back on the ground floor) in its place. */
@@ -248,6 +272,7 @@ export class Game {
     this.robot.setInvincible(BIGGY_STUMBLE_DURATION + BIGGY_POST_STUN_GRACE);
     this.prevEnergyFraction = 1; // Level 3 has no timer, so only energy needs resetting here
     this.hud.showIntro(3);
+    this.awaitingStart = true;
   }
 
   /**
@@ -271,6 +296,7 @@ export class Game {
     this.prevTimeRemaining = Infinity;
     this.prevEnergyFraction = 1;
     this.hud.showIntro(1);
+    this.awaitingStart = true;
   }
 
   private onContinue(): void {
@@ -336,17 +362,41 @@ export class Game {
 
     const currentDown = this.input.downKeys();
 
-    if (finished) {
+    if (this.awaitingStart) {
+      // Intro panel is up: the level is frozen (no timer, no hazards, no
+      // movement) until the player presses a control key for the first time.
+      // Same fresh-press diff as the finished branch below, and for a sharper
+      // reason: hud.showIntro() is called from inside onContinue(), so the
+      // very key that dismissed the previous level's end screen is still held
+      // this frame — a plain isDown() check would start the next level in the
+      // same frame its briefing appeared — which is exactly what the old
+      // "any key currently down hides the intro" line at the bottom of tick()
+      // did, making Levels 2 and 3 flash their panel for a single frame.
+      for (const key of START_KEYS) {
+        if (currentDown.has(key) && !this.prevDownKeys.has(key)) {
+          this.awaitingStart = false;
+          this.hud.hideIntro();
+          break;
+        }
+      }
+      // Ambient-only tick while frozen — the robot keeps breathing (and a
+      // just-swapped GLTF leaves its T-pose) without any of update()'s timers
+      // running, so spawn invincibility still starts when play does.
+      this.robot.updateIdle(dt);
+      this.beerTap.update(dt);
+    } else if (finished) {
       // Freeze in place once the level ends — walking around behind the
       // overlay read as a bug, and it's what the continue prompt is for.
-      // Any key continues for Levels 1-2, same "press anything" precedent
-      // the intro panel already set with hasAnyKeyDown() — but Level 3's
+      // Any key continues for Levels 1-2 — the intro panel that follows is
+      // stricter (a control key, see the awaitingStart branch above), which
+      // is what keeps this screen's keypress from also starting the next
+      // level. Level 3's
       // "finished" screen is the whole day's end summary, not just a level
       // transition, and the user specifically wants R there (not any key), so a
       // stray keypress right after the score appears can't restart the day
       // by accident. Either way, this diffs against last frame's held keys
-      // rather than checking "is it down right now": plain hasAnyKeyDown()
-      // (or checking KeyR alone without the diff) would fire instantly if
+      // rather than checking "is it down right now": a bare "any key is
+      // down" test (or checking KeyR alone without the diff) would fire if
       // the relevant key was already held the moment the level finished
       // (e.g. still holding Shift when Biggy falls mid-chase, or already
       // holding R from a previous restart) — a key already down does
@@ -437,8 +487,6 @@ export class Game {
     }
 
     this.prevDownKeys = new Set(currentDown);
-
-    if (this.input.hasAnyKeyDown()) this.hud.hideIntro();
 
     if (this.level === 1) {
       this.hud.update(this.swagRun!.score, this.swagRun!.timeRemaining, this.swagRun!.finished, this.robot.energyFraction, this.swagRun!.timeBonus, 1);
