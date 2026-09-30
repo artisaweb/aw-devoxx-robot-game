@@ -45,6 +45,29 @@ their nose, and they'll break off and come after you.
 
 > The Level 3 shot above is the opening moment, before the buffet stocks and the queue forms.
 
+### Robots that have started acting human
+
+Nothing any of the three robots does is a robot job. They are at a conference behaving exactly
+like the people around them, and the whole game is built out of that one joke.
+
+They **collect swag** they have no use for — caps, shirts, sunglasses, stickers, a crown, a
+branded key, a drone — and wear it, stacking it up on their own bodies as the run goes on. Walk
+into somebody and you drop the last thing you grabbed; they pick it up and start wearing it
+themselves.
+
+They **eat and drink.** Voxxy queues at the coffee machine and the candy kiosk to keep going.
+Biggy works a lunch buffet, and every sandwich he eats makes him permanently rounder, slower and
+easier to knock over — the hazard is the queue he keeps cutting into. All three will pull a beer
+from the sponsor tap, and it makes them *tipsy*: the steering wanders, and a little mechanical bug
+starts orbiting their head.
+
+They **get tired.** Energy drains when they run and jump, and recharges from coffee, from candy,
+from a charging pad on the floor — the robot equivalent of needing a break, and the actual
+currency of Level 2, where Droid has sixteen rows of auditorium seating to jump.
+
+And they **collect knowledge** — one-liners off a conference stage, which is the most human thing
+in the building: a machine wandering a venue picking up wisdom it could have downloaded.
+
 ---
 
 ## Running it locally
