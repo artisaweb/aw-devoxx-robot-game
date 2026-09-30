@@ -345,10 +345,6 @@ const OPTIONAL_CLIPS: { name: RobotAnimationName; suffix: string }[] = [
   { name: 'run', suffix: 'run' },
   { name: 'jump', suffix: 'jump' },
   { name: 'stun', suffix: 'stun' },
-  // No 'idle' entry: none of the three robots has an -idle.glb, and probing
-  // for one anyway put three 404s in every player's console. Robot.ts
-  // already falls back to a frozen walk pose without it — add the entry
-  // back alongside the first robot that actually gets an idle clip.
 ];
 
 /** Loads the named robot's real model plus whatever animation clips are available. */
