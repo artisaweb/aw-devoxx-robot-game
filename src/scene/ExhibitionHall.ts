@@ -1662,7 +1662,11 @@ export function updateContactProps(
     // Same height gate as the docks: a mover a storey up, or on a table
     // overhead, isn't touching this.
     if (Math.abs(mover.y - placed.baseY) > 1.0) continue;
-    const reach = placed.footprint + MOVER_CLEARANCE * mover.sizeScale;
+    // + 0.05, same slack as the DEVOXX letters' contact test: walking straight
+    // into a prop that has colliders, the push-out leaves the mover exactly at
+    // footprint + clearance (the recycling bins end-on: 1.98 vs 1.98), so
+    // without it, firing came down to floating-point noise.
+    const reach = placed.footprint + MOVER_CLEARANCE * mover.sizeScale + 0.05;
     const dx = mover.x - placed.x;
     const dz = mover.z - placed.z;
     if (dx * dx + dz * dz > reach * reach) continue;
