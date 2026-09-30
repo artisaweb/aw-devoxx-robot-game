@@ -3141,7 +3141,15 @@ export function createFirstFloor(): THREE.Group {
   // straight at. Making the refuel a contested tile would be a defensible
   // design, but it should be a decision rather than an accident of two features
   // picking the same coordinate.
-  addChargingDock(group, 'first', { x: hall.x - 8.5, y, z: hall.z + 3, rotationY: 0 });
+  //
+  // z was hall.z + 3 (world -46) until the mid-corridor stairwells (SIDE_STAIRS)
+  // landed on top of it — the left one's corridor-facing rail sits at world
+  // x -22, and the pad's own 0.9m radius (PAD_R * DOCK_SCALE) reached clean
+  // through it (the user: "this charge pad is colliding with the stair").
+  // hall.z - 6 (world -55) clears the rail by ~3m and the nearest furniture
+  // pillar by ~2m — checked against the live colliders, not eyeballed — while
+  // staying in the same left-hand strip and the same quote-to-quote stretch.
+  addChargingDock(group, 'first', { x: hall.x - 8.5, y, z: hall.z - 6, rotationY: 0 });
   // The far one serves the deep end, between the quotes at z=-85 and z=-115 —
   // the longest stretch of the level with nothing on it, and the furthest point
   // from anywhere else to recover. Opposite strip from the midpoint dock, so
