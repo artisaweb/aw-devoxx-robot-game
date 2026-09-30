@@ -13,6 +13,12 @@ import type * as THREE from 'three';
 // usually settled before the player's first move.
 
 const MAX_PIXEL_RATIO = 2; // beyond 2x the extra pixels aren't visible, only paid for
+// A phone (under 500px on its short side — the HUD's own phone-sized
+// threshold, Hud.ts's MINIMAP_SMALL_SCREEN) starts lower still: at that
+// size 1.5x is hard to tell from 2x and is ~44% fewer pixels on every
+// level, and Level 2 then starts near where the scaler would settle it.
+const PHONE_MAX_PIXEL_RATIO = 1.5;
+const PHONE_SCREEN = 500;
 const MIN_PIXEL_RATIO = 0.75;
 const TARGET_FPS = 50;
 const WINDOW_SECONDS = 1;
@@ -37,7 +43,8 @@ export class ResolutionScaler {
   }
 
   private maxRatio(): number {
-    return Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+    const phone = Math.min(window.innerWidth, window.innerHeight) < PHONE_SCREEN;
+    return Math.min(window.devicePixelRatio || 1, phone ? PHONE_MAX_PIXEL_RATIO : MAX_PIXEL_RATIO);
   }
 
   private apply(ratio: number): void {
