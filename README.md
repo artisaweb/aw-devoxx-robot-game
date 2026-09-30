@@ -132,6 +132,11 @@ is remembered). The keyboard keeps working either way. On a phone-sized screen t
 away behind a MAP chip in the corner so it doesn't cover the view — tap it to open a smaller
 map, tap the map to fold it again.
 
+<p align="center">
+  <img src="docs/screenshots/mobile-landscape-level1.jpg" height="300" alt="Level 1 on a phone held sideways: Voxxy beside the Vaultius booth with a glowing key pickup ahead, the stick at bottom left pushed forward, BOOST and JUMP at bottom right, and the folded MAP chip in the top corner">
+  <img src="docs/screenshots/mobile-portrait-level2.jpg" height="300" alt="Level 2 on a phone held upright: Droid heading down the first-floor corridor towards the DEVOXX screen, quotes glowing along the way and an attendee closing in behind him, with the stick, BOOST and JUMP along the bottom">
+</p>
+
 ### Debug shortcuts
 
 These are gated to localhost and ignored on the hosted build:
