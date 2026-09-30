@@ -36,8 +36,8 @@ cap, drone, sticker, shirt), but swag is still purely cosmetic (score + a worn a
 
 Two open decisions if this gets picked up:
 - Whether to give swag types actual gameplay effects at all, or leave them
-  cosmetic — see `swagAccessories.md`'s "Effects on Voxxy" section for the
-  options menu (not decided).
+  cosmetic — the private design notes (not in this repo) hold an options
+  menu for per-item effects on Voxxy (not decided).
 - If any effect ships: whether a hazard wearing a stolen item also gains the
   effect, and whether the drone (not obviously "worn") is even stealable.
 
@@ -45,7 +45,7 @@ Two open decisions if this gets picked up:
 
 Two related ideas, actually the same design applied at different scopes:
 
-- **Narrow-gap hazard evasion** (`sponsor-booths.md`): gaps small enough for
+- **Narrow-gap hazard evasion**: gaps small enough for
   the player but awkward for a hazard's simple wall-bounce steering — a
   level-design mechanic that currently only exists by accident in a few
   booth clusters.
