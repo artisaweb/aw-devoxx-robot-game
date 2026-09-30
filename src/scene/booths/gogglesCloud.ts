@@ -4,9 +4,12 @@ import { BOOTH_PLATFORM_ZONES } from '../ExhibitionHall';
 import { SPONSOR_SIGNAGE } from '../../text/signage';
 import { mat } from './shared';
 
+// Pivoted about its own zone center, like RocketMind's — see
+// ROCKETMIND_ROTATION's note in rocketMind.ts.
 export const GOGGLES_ROTATION = { cx: BOOTH_PLATFORM_ZONES[1].x, cz: BOOTH_PLATFORM_ZONES[1].z, angle: -Math.PI / 2 };
 
-
+// Goggles Cloud's backdrop screen — name + a genuinely safe pun-on-the-name
+// tagline (vision, not "this is confusing").
 function createGogglesCloudSignTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
@@ -139,9 +142,3 @@ export function createGogglesCloudBooth(): THREE.Object3D {
 
   return group;
 }
-
-// --- KING: gold lion statue on a pedestal in front of an orange back-wall
-// banner, flanked by a high-top counter table and the candy kiosk (built by
-// SwagRun.ts) — matches a real booth's composition (backdrop wall behind a
-// centerpiece, furniture flanking left/right) rather
-// than a single statue standing alone in open floor.

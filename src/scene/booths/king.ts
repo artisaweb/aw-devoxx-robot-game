@@ -37,14 +37,12 @@ export const KING_ROTATION = { cx: KING_LION_POS[0], cz: KING_LION_POS[1], angle
 // jump-platform collision. Rotating this local point through KING_ROTATION
 // lands exactly on BOOTH_PLATFORM_ZONES[2].
 const KING_TABLE_LOCAL: [number, number] = [36, -8];
-// Relocated (2026-09-27): the user — "the vaultius booth should be placed
-// somewhere else in a good location" — the back-left corner it landed in
-// after the hall resize sat only 6m from the outer wall and right beside
-// the new Stairs A enclosure/left lunch table cluster, a cramped, easy-to-
-// miss spot. Moved to the open front-center floor (previously nothing but
-// the beer tap and the middle lunch table out there), clear of the column
-// grid, both stair enclosures, and every other prop.
 
+// --- KING: gold lion statue on a pedestal in front of an orange back-wall
+// banner, flanked by a high-top counter table and the candy kiosk (built by
+// SwagRun.ts) — matches a real booth's composition (backdrop wall behind a
+// centerpiece, furniture flanking left/right) rather
+// than a single statue standing alone in open floor.
 const KING_PEDESTAL_HEIGHT = 0.5;
 // The high-top counter is a real jump platform (BOOTH_PLATFORM_ZONES[2], not
 // a hardcoded position here) — same "hazards can't jump" escape as the
@@ -274,13 +272,3 @@ export function createKINGBooth(): THREE.Object3D {
 
   return group;
 }
-
-// --- Vaultius: an oversized vault door landmark.
-// Vaultius furniture positions kept as their own constants (not computed
-// inline) so both the visual builder and getBoothColliders() agree on where
-// they actually are, same convention as KING's table/shelf. Each position
-// was checked by brute-force search against the vault, each other, the
-// nearby support columns, and the booth's own backdrop wall (easy to place
-// something behind/inside the wall by accident, since the wall itself moves
-// with the same rotation), rather than hand-placed and hoped for.
-// All three shifted by (-5, -19), matching VAULTIUS_VAULT_POS's own move.

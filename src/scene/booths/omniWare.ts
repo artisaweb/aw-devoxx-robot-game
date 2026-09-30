@@ -3,6 +3,10 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { SPONSOR_SIGNAGE } from '../../text/signage';
 import { mat } from './shared';
 
+// Right column, between KING and Goggles Cloud — completes the 7th platinum
+// sponsor alongside the other six. Shifted by
+// (+5, +1) — same reasoning as KING's own shift (king.ts) and
+// BOOTH_PLATFORM_ZONES in ExhibitionHall.ts.
 export const OMNIWARE_POS: [number, number] = [30, 4];
 export const OMNIWARE_ROTATION = { cx: OMNIWARE_POS[0], cz: OMNIWARE_POS[1] - 0.2, angle: -Math.PI / 2 };
 // Ghost offset from the real rack, in each direction. 4.5 is the smallest
@@ -10,10 +14,9 @@ export const OMNIWARE_ROTATION = { cx: OMNIWARE_POS[0], cz: OMNIWARE_POS[1] - 0.
 // backdrop-wall colliders by a real margin, so you can actually walk between
 // each rack rather than seeing three racks with no walkable gap between them.
 export const OMNIWARE_GHOST_OFFSET = 4.5;
-// RocketMind's and Goggles Cloud's desks are pivoted about their own zone
-// center (BOOTH_PLATFORM_ZONES swapped halfW/halfD to match, in
-// ExhibitionHall.ts), so position is unchanged — only the angle matters.
 
+// OmniWare's backdrop screen — name + "run anywhere," never "clone" (which
+// read as "cheap knockoff").
 function createOmniWareSignTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;

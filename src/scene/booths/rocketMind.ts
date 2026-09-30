@@ -4,6 +4,9 @@ import { BOOTH_PLATFORM_ZONES } from '../ExhibitionHall';
 import { SPONSOR_SIGNAGE } from '../../text/signage';
 import { mat } from './shared';
 
+// RocketMind's and Goggles Cloud's desks are pivoted about their own zone
+// center (BOOTH_PLATFORM_ZONES swapped halfW/halfD to match, in
+// ExhibitionHall.ts), so position is unchanged — only the angle matters.
 export const ROCKETMIND_ROTATION = { cx: BOOTH_PLATFORM_ZONES[0].x, cz: BOOTH_PLATFORM_ZONES[0].z, angle: Math.PI / 2 };
 
 // RocketMind's own gradient sign texture (magenta -> orange -> yellow) with
@@ -92,13 +95,11 @@ function createRocketProp(x: number, z: number): THREE.Object3D {
   return group;
 }
 
-// A small shelf unit with folded-item props — first built for KING, now
-// shared so a second booth wanting the same "real photo has a swag shelf"
-// detail doesn't duplicate it. Purely decorative (no relation to SwagRun's
-// real pickup system). `shelfColor` is the wood/metal the shelf boards
-// themselves are made of; `foldColors` are the folded items sitting on them
-// (one per shelf, bottom to top).
-
+// --- RocketMind: "the IDE of 2040" — a holographic display over its jump-desk,
+// a low-poly rocket standing beside it (the booth's namesake), and a small
+// backdrop wall behind — all with generous clearance around the desk itself,
+// since there's no reason to crowd it (contrast KING, whose cluster of props
+// needed an explicit playability check).
 export function createRocketMindBooth(): THREE.Object3D {
   const zone = BOOTH_PLATFORM_ZONES[0];
   const group = new THREE.Group();
@@ -154,6 +155,3 @@ export function createRocketMindBooth(): THREE.Object3D {
 
   return group;
 }
-
-// Goggles Cloud's backdrop screen — name + a genuinely safe pun-on-the-name
-// tagline (vision, not "this is confusing").

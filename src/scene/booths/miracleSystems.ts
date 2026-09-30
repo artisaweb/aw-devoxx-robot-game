@@ -3,10 +3,15 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { SPONSOR_SIGNAGE } from '../../text/signage';
 import { mat } from './shared';
 
+// Shifted by (-5, +8) — same reasoning as KING's own shift (king.ts) and
+// BOOTH_PLATFORM_ZONES in ExhibitionHall.ts.
 export const MIRACLE_CAR_POS: [number, number] = [-30, 24];
 export const MIRACLE_ROTATION = { cx: MIRACLE_CAR_POS[0], cz: MIRACLE_CAR_POS[1] - 0.4, angle: Math.PI / 2 };
-// Shifted by (-5, +1) — same reasoning as KING/BOOTH_PLATFORM_ZONES above.
 
+// Miracle Systems' backdrop screen — name + a genuinely neutral corporate
+// slogan about performance, not licensing cost — the
+// joke lives entirely in the name/rhyme and the F1 car, never in anything
+// that reads as a real complaint about the real sponsor's licensing.
 function createMiracleSignTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
@@ -52,12 +57,10 @@ function createRacingWheel(radius: number, width: number): THREE.Object3D {
   return group;
 }
 
-// --- RocketMind: "the IDE of 2040" — a holographic display over its jump-desk,
-// a low-poly rocket standing beside it (the booth's namesake), and a small
-// backdrop wall behind — all with generous clearance around the desk itself,
-// since there's no reason to crowd it (contrast KING, whose cluster of props
-// needed an explicit playability check).
-
+// --- Miracle Systems: an F1 car on a display turntable — a wink at the real
+// sponsor's actual F1 team sponsorship. Sidepods, a helmet, an air intake,
+// endplates, a rear DRS flap, and proper multi-part wheels. Red/gold to
+// match a real F1 livery.
 export function createMiracleSystemsBooth(): THREE.Object3D {
   const group = new THREE.Group();
   const [x, z] = MIRACLE_CAR_POS;
@@ -159,15 +162,3 @@ export function createMiracleSystemsBooth(): THREE.Object3D {
 
   return group;
 }
-
-// A glowing abstract network (nodes + connections, not a literal map) behind
-// a matching "Tiny, on a national scale." line — the actual joke for Tiny's
-// booth: a modest, humble counter with a comparatively oversized screen
-// behind it, celebrating real reach rather than an invented complaint about
-// service speed (the earlier queue-maze concept got replaced for this).
-// Belgium's real 10 provinces, each with a green "online" dot, are the
-// actual content of Tiny's oversized screen (copy lives in
-// src/text/signage.ts along with the rest of this booth's copy). Genuine
-// geographic facts read as more charming and less like an invented boast
-// than a generic "look how big we are" line.
-

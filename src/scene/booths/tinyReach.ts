@@ -3,12 +3,21 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { SPONSOR_SIGNAGE, BELGIAN_PROVINCES } from '../../text/signage';
 import { mat } from './shared';
 
+// Shifted by (-5, +1) — same reasoning as KING's own shift (king.ts) and
+// BOOTH_PLATFORM_ZONES in ExhibitionHall.ts.
 export const TINY_CENTER: [number, number] = [-30, 6];
 export const TINY_ROTATION = { cx: TINY_CENTER[0], cz: TINY_CENTER[1] - 0.2, angle: Math.PI / 2 };
-// Right column, between KING and Goggles Cloud — completes the 7th platinum
-// sponsor alongside the other six. Shifted by
-// (+5, +1) — same reasoning as KING/BOOTH_PLATFORM_ZONES above.
 
+// A glowing abstract network (nodes + connections, not a literal map) behind
+// a matching "Tiny, on a national scale." line — the actual joke for Tiny's
+// booth: a modest, humble counter with a comparatively oversized screen
+// behind it, celebrating real reach rather than an invented complaint about
+// service speed (the earlier queue-maze concept got replaced for this).
+// Belgium's real 10 provinces, each with a green "online" dot, are the
+// actual content of Tiny's oversized screen (copy lives in
+// src/text/signage.ts along with the rest of this booth's copy). Genuine
+// geographic facts read as more charming and less like an invented boast
+// than a generic "look how big we are" line.
 function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -180,6 +189,3 @@ export function createTinyBooth(): THREE.Object3D {
 
   return group;
 }
-
-// OmniWare's backdrop screen — name + "run anywhere," never "clone" (which
-// read as "cheap knockoff").

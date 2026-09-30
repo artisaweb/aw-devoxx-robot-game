@@ -3,6 +3,13 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { SPONSOR_SIGNAGE } from '../../text/signage';
 import { mat, cssHex, createBoothSignTexture } from './shared';
 
+// Relocated (2026-09-27): the user — "the vaultius booth should be placed
+// somewhere else in a good location" — the back-left corner it landed in
+// after the hall resize sat only 6m from the outer wall and right beside
+// the new Stairs A enclosure/left lunch table cluster, a cramped, easy-to-
+// miss spot. Moved to the open front-center floor (previously nothing but
+// the beer tap and the middle lunch table out there), clear of the column
+// grid, both stair enclosures, and every other prop.
 export const VAULTIUS_VAULT_POS: [number, number] = [-10, 18];
 // Pivot for rotateBooth/rotateCollider — the floor pad's own center
 // (VAULTIUS_VAULT_POS[1] - 0.2, matching floorNeon's placement below), not
@@ -10,8 +17,13 @@ export const VAULTIUS_VAULT_POS: [number, number] = [-10, 18];
 // after rotating. Left column (x<0): +90° turns the booth's built-in +z
 // front to face +x, toward the hall center.
 export const VAULTIUS_ROTATION = { cx: VAULTIUS_VAULT_POS[0], cz: VAULTIUS_VAULT_POS[1] - 0.2, angle: Math.PI / 2 };
-// Shifted by (-5, +8) — same reasoning as KING/BOOTH_PLATFORM_ZONES above.
 
+// A small shelf unit with folded-item props — first built for KING, and kept
+// as its own builder when Vaultius wanted the same "real photo has a swag
+// shelf" detail; Vaultius is the booth that uses it now. Purely decorative
+// (no relation to SwagRun's real pickup system). `shelfColor` is the
+// wood/metal the shelf boards themselves are made of; `foldColors` are the
+// folded items sitting on them (one per shelf, bottom to top).
 function createSwagShelf(x: number, z: number, shelfColor: number, foldColors: number[]): THREE.Object3D {
   const group = new THREE.Group();
   const shelfMat = mat(shelfColor, { roughness: 0.7 });
@@ -65,11 +77,15 @@ function createATMScreenTexture(): THREE.CanvasTexture {
   return texture;
 }
 
-// Miracle Systems' backdrop screen — name + a genuinely neutral corporate
-// slogan about performance, not licensing cost — the
-// joke lives entirely in the name/rhyme and the F1 car, never in anything
-// that reads as a real complaint about the real sponsor's licensing.
-
+// --- Vaultius: an oversized vault door landmark.
+// Vaultius furniture positions kept as their own constants (not computed
+// inline) so both the visual builder and getBoothColliders() agree on where
+// they actually are, same convention as KING's table/shelf. Each position
+// was checked by brute-force search against the vault, each other, the
+// nearby support columns, and the booth's own backdrop wall (easy to place
+// something behind/inside the wall by accident, since the wall itself moves
+// with the same rotation), rather than hand-placed and hoped for.
+// All three shifted by (-5, -19), matching VAULTIUS_VAULT_POS's own move.
 export const VAULTIUS_KEY_COUNTER_POS: [number, number] = [-5.45, 18.55];
 export const VAULTIUS_KIOSK_POS: [number, number] = [-10.2, 22.55];
 export const VAULTIUS_SHELF_POS: [number, number] = [-14.95, 18.3];
@@ -210,8 +226,3 @@ export function createVaultiusBooth(): THREE.Object3D {
 
   return group;
 }
-
-// --- Miracle Systems: an F1 car on a display turntable — a wink at the real
-// sponsor's actual F1 team sponsorship. Sidepods, a helmet, an air intake,
-// endplates, a rear DRS flap, and proper multi-part wheels. Red/gold to
-// match a real F1 livery.
