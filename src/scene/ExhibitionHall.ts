@@ -105,19 +105,27 @@ export interface RaisedZone {
 // visible stairwell; the stair is behind a wall, after a double door.
 // Modeling a staircase the player never sees would be a lot of geometry to
 // make it read as a real level change, while still reading as "just part of
-// the ground floor" — a door teleport sidesteps that entirely: walking up to
-// either side instantly moves the robot to the other. It also means the two
-// floors don't need to look architecturally connected at all — each can have
-// its own identity (bright open exhibition hall vs. dark cinema corridor),
-// like two distinct maps joined by a door.
+// the ground floor" — so nothing connects the two floors at all. Every
+// visible stair and door in this file dead-ends at a closed door, and the
+// robot only ever changes floor through Game.ts's own level transitions
+// (advanceToLevel2/advanceToLevel3 → robot.setMap), never by walking
+// anywhere. (A walk-up door teleport once did this job; it was never called
+// and has been removed.) It also means the two floors don't need to look
+// architecturally connected at all — each can have its own identity (bright
+// open exhibition hall vs. dark cinema corridor), like two distinct maps
+// joined by a closed door.
 export type Floor = 'ground' | 'first';
 
 export const FLOOR_HEIGHT = 4.5; // first floor's story height
-// -13, not the tidier -10 — that's exactly a column gridline (COLUMN_SPACING=10,
-// gridlines at 0/±10/±20) and a column sits at (x=-10, z=-10) between the door
-// and the hall's center, which would leave a robot walking straight toward
-// the door stuck bouncing off it.
-export const FIRST_FLOOR_CENTER_X = -13; // Stairs A/B door, on the ground floor's back wall
+// The first-floor hall's own centreline. -13 is inherited: it was first the x
+// of a Stairs A/B door on the ground floor's back wall (picked over the tidier
+// -10 to keep a robot walking at that door off a column on the old grid), and
+// the floor above was centred on it so an arriving robot lined up. That door
+// and its teleport are gone (see Floor above) and nothing on the ground floor
+// reads this any more — it only positions the first-floor hall, and
+// everything up there (Room 4, the stairwells, every pickup and hazard start)
+// is laid out around it, so the value stays.
+export const FIRST_FLOOR_CENTER_X = -13;
 
 // First-floor layout — first decided 2026-09-24 as one real auditorium
 // replacing four smaller mirrored rooms, then rebuilt at a much bigger,
@@ -1129,8 +1137,9 @@ export function createExhibitionHall(): THREE.Group {
   const wallThickness = 0.5;
   const frontSegmentWidth = (HALL_WIDTH - DOORWAY_WIDTH) / 2;
   const wallDefs = [
-    // Back wall: solid — the stairs behind it are a closed door (see
-    // above), not a walk-through gap.
+    // Back wall: solid, no opening — Stairs A/B are the freestanding
+    // enclosures standing inside the hall (createStairEnclosure), closed
+    // doors and all, not a gap in this wall.
     { w: HALL_WIDTH, d: wallThickness, x: 0, z: -halfD },
     // front wall, split either side of the (full-width) entrance opening
     { w: frontSegmentWidth, d: wallThickness, x: -(DOORWAY_WIDTH / 2 + frontSegmentWidth / 2), z: halfD },
@@ -2621,8 +2630,8 @@ function buildStairsAndScreen(group: THREE.Group, y: number): void {
 }
 
 /**
- * One big, real, walkable auditorium — used for both Room 4 and its mirror
- * Room 9, entrance on whichever wall faces the hall. Geometry mirrors
+ * One big, real, walkable auditorium — only Room 4 is built with it (every
+ * other room, its mirror Room 9 included, is a closed door prop), entrance on whichever wall faces the hall. Geometry mirrors
  * `zone`/ROW_RISE/ROW_DEPTH/NUM_ROWS/APRON_DEPTH exactly, same
  * single-source-of-truth principle as the rest of this file, so the visible
  * rows and getFirstFloorHeightAt's/getAuditoriumRowWallColliders' own
@@ -2972,13 +2981,15 @@ function buildAuditorium(
 
 // The first floor: a wide central hall running the floor's full length, with
 // one real, big, walkable auditorium (Room 4, at real scale — see the
-// DECIDED note by ROOM4_ZONE) on the left, plus the other 6 session rooms
-// (3, 6, 7, 9, 8, 10) as closed-door props along the hall's side walls. The
-// hall *is* the corridor/landing space — there's no separate lobby. Geometry
-// mirrors FIRST_FLOOR_ZONES exactly so the walkable footprint and what you
-// see always agree. Both entry walls
-// carry their own closed door too — walking back up to one teleports you
-// back down.
+// first-floor layout note above HALLWAY_CORRIDOR_HALF_WIDTH) on the left, plus
+// the other 7 session rooms (3, 5, 6 on the left; 10, 9, 8, 7 on the right) as
+// closed-door props along the hall's side walls. The hall *is* the
+// corridor/landing space — there's no separate lobby. Geometry mirrors
+// FIRST_FLOOR_ZONES exactly so the walkable footprint and what you see always
+// agree. Neither end leads anywhere: the near end stops at a laser barrier,
+// the far end is Stair C, a real flight down to closed glass doors, and the
+// two mid-corridor stairwells end at closed doors too — the robot leaves this
+// floor only through Game.ts's level transitions (see Floor).
 export function createFirstFloor(): THREE.Group {
   const group = new THREE.Group();
   // Visuals build from the full-size (non-recessed) zones — the collision
@@ -3199,16 +3210,19 @@ export function createFirstFloor(): THREE.Group {
   // roomNumberForSlot(), so there's no second place for it to disagree with.
   buildAuditorium(group, room4, 'right', y, auditoriumMats);
 
-  // The mid-corridor stairs down, through the wall gaps opened above.
+  // The mid-corridor stairs down, sunk into the floor through the holes
+  // punched above (floorHoles).
   for (const stair of SIDE_STAIRS) buildSideStair(group, stair);
 
   return group;
 }
 
 // Entrance foyer beyond the front opening: bright, lower-ceilinged, with an
-// orange-lit reception backdrop, sitting on a real ledge above the taller
-// hall, matching the real venue's look. The ledge is a jump-up / fall-down
-// obstacle (see Robot.ts), not a walkable ramp.
+// orange-lit accent wall, raised FOYER_FLOOR_Y above the taller hall,
+// matching the real venue's look. Reached by a real walkable staircase
+// (entranceStairHeightAt), not the jump-up ledge it started as, and capped by
+// closed glass doors rather than a reception mockup — see FOYER_DEPTH's own
+// comment for both changes.
 function createEntranceFoyer(): THREE.Group {
   const group = new THREE.Group();
   const halfD = HALL_DEPTH / 2;
