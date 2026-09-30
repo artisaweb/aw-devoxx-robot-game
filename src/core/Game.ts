@@ -245,7 +245,7 @@ export class Game {
     this.robot.setInvincible(VOXXY_STUN_DURATION + VOXXY_POST_STUN_GRACE);
     this.scene.add(this.swagRun!.group);
 
-    this.followCamera = new FollowCamera(container.clientWidth / container.clientHeight);
+    this.followCamera = new FollowCamera(container.clientWidth, container.clientHeight);
     this.hud = new Hud(container);
     // After the HUD so the controls sit on top of it; the intro panel's
     // switch and the HUD's wording both follow the controls' own state.
@@ -302,7 +302,7 @@ export class Game {
   private onResize = (): void => {
     const { clientWidth, clientHeight } = this.container;
     this.renderer.setSize(clientWidth, clientHeight);
-    this.followCamera.onResize(clientWidth / clientHeight);
+    this.followCamera.onResize(clientWidth, clientHeight);
   };
 
   start(): void {

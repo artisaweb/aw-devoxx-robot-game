@@ -19,14 +19,24 @@ const FOLLOW_RATE = 6; // higher = snappier
 const WALL_MARGIN = 1.5; // keep the camera this far inside the hall walls
 const CAMERA_WALL_MARGIN = 0.25; // stay this far in front of a wall the raycast hits, not flush against it
 const MIN_CAMERA_DIST = 1.2; // never pull the camera closer to the character than this, however tight the space
+// A phone held sideways: the vertical field of view is fixed, so on a screen
+// this short the robot sits dead centre with the top ~40% of it ceiling and
+// the floor ahead squeezed under the touch controls. Tilting down trades
+// that ceiling for floor in front of the robot. Below 500px tall matches the
+// HUD's own phone-sized threshold (Hud.ts's MINIMAP_SMALL_SCREEN); portrait
+// and desktop screens keep the original framing.
+const SHORT_LANDSCAPE_HEIGHT = 500;
+const SHORT_LANDSCAPE_TILT = THREE.MathUtils.degToRad(9);
 
 export class FollowCamera {
   readonly camera: THREE.PerspectiveCamera;
   private raycaster = new THREE.Raycaster();
   private snapNext = false;
+  private tilt = 0;
 
-  constructor(aspect: number) {
-    this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 500);
+  constructor(width: number, height: number) {
+    this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 500);
+    this.onResize(width, height);
   }
 
   /**
@@ -40,9 +50,10 @@ export class FollowCamera {
     this.snapNext = true;
   }
 
-  onResize(aspect: number): void {
-    this.camera.aspect = aspect;
+  onResize(width: number, height: number): void {
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    this.tilt = width > height && height < SHORT_LANDSCAPE_HEIGHT ? SHORT_LANDSCAPE_TILT : 0;
   }
 
   /**
@@ -120,5 +131,6 @@ export class FollowCamera {
 
     const lookAt = robot.position.clone().add(new THREE.Vector3(0, LOOK_HEIGHT, 0));
     this.camera.lookAt(lookAt);
+    if (this.tilt) this.camera.rotateX(-this.tilt);
   }
 }
