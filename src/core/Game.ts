@@ -31,6 +31,7 @@ import { Robot } from '../entities/Robot';
 import { InputManager } from '../input/InputManager';
 import { TouchControls } from '../input/TouchControls';
 import { FollowCamera } from '../camera/FollowCamera';
+import { ResolutionScaler } from './ResolutionScaler';
 import { SwagRun, STUN_DURATION as VOXXY_STUN_DURATION, POST_STUN_GRACE as VOXXY_POST_STUN_GRACE, COFFEE_MACHINE_POS } from '../gameplay/SwagRun';
 import { KnowledgeRun, TOPPLE_DURATION, TOPPLE_RISE_DURATION, POST_TOPPLE_GRACE, OBSTACLE_DEFS } from '../gameplay/KnowledgeRun';
 import { LunchRush, STUN_DURATION as BIGGY_STUMBLE_DURATION, POST_STUN_GRACE as BIGGY_POST_STUN_GRACE, JAVA_MACHINE_POS } from '../gameplay/LunchRush';
@@ -83,6 +84,7 @@ const START_KEYS = [
 
 export class Game {
   private renderer: THREE.WebGLRenderer;
+  private resolution: ResolutionScaler;
   private scene = new THREE.Scene();
   private robot = new Robot();
   private input = new InputManager();
@@ -229,7 +231,7 @@ export class Game {
 
   constructor(private container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.resolution = new ResolutionScaler(this.renderer);
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(this.renderer.domElement);
 
@@ -367,6 +369,7 @@ export class Game {
     this.groundFloorGroup.visible = false;
     this.sponsorBoothsGroup.visible = false;
     this.firstFloorGroup.visible = true;
+    this.resolution.reset();
 
     this.level = 2;
     this.knowledgeRun = new KnowledgeRun();
@@ -390,6 +393,7 @@ export class Game {
     this.knowledgeRun = undefined;
     this.firstFloorGroup.visible = false;
     this.groundFloorGroup.visible = true;
+    this.resolution.reset();
     this.sponsorBoothsGroup.visible = true;
 
     this.level = 3;
@@ -416,6 +420,7 @@ export class Game {
     this.lunchRun = undefined;
     this.dayScore = { voxxy: 0, droid: 0 };
     this.dayEndSummary = undefined;
+    this.resolution.reset();
 
     this.level = 1;
     this.swagRun = new SwagRun();
@@ -765,5 +770,6 @@ export class Game {
       this.level === 2 ? [this.firstFloorGroup] : [this.groundFloorGroup, this.sponsorBoothsGroup];
     this.followCamera.update(this.robot, dt, cameraCollidables);
     this.renderer.render(this.scene, this.followCamera.camera);
+    this.resolution.update();
   }
 }
