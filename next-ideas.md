@@ -75,15 +75,14 @@ Recommendation: Option A first (cheapest, directly answers the walkability
 complaint, zero risk to existing pickup/waypoint positions), then reassess
 whether the middle still reads as empty before attempting B or C.
 
-## Code quality
-
-- Split `sponsorBooths.ts` — currently one file for every booth; consider
-  breaking it up per booth.
-
 ## Visual polish
 
-- **Upstairs cinema room** is missing some Devoxx styling/branding around it
-  (the live-coding room has more of a treated look in comparison).
-- **Devoxx lettering prop** could be reused in more places: the cinema room,
-  the hallway, and the ground floor between the small stair and the closed
-  doors leading to reception.
+- **Ambience.** There is no music and no room tone — no crowd murmur in the
+  exhibition hall, no muffled talk bleeding out of Room 4's doors, no hum in
+  the empty deep end of the corridor. Every sound in the game is a one-shot
+  event. A continuous bed would do more for "you are at a conference" than any
+  further prop.
+- **The other seven auditoriums.** Room 4 is the only one with a real
+  interior; 3, 5, 6, 7, 8, 9 and 10 are closed doors with nothing behind them.
+  Opening even one more would want its own reason to go in, not just a second
+  copy of the same seating.
