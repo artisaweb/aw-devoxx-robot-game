@@ -354,6 +354,32 @@ def sfx_biggy_fall():
     return place(out, wobble, 0.38)
 
 
+def sfx_wet_floor_zap():
+    # Mains electricity through a puddle: a hard arc strike, then a 50 Hz buzz
+    # (Belgium, not 60) amplitude-modulated hard enough to read as mains rather
+    # than as a tone, with the crackle of the arc riding over it — and a short
+    # descending whine as whatever it hit gives up.
+    dur = 0.9
+    n = int(dur * SR)
+    t = t_axis(dur)
+
+    strike = crackle(0.12, 9000, tone=2600) * 2.2
+    strike = strike * exp_decay(len(strike), 0.035)
+
+    hum = square(np.full(n, 50.0)) * 0.5 + square(np.full(n, 100.0), 0.35) * 0.5
+    hum = resonator(hum, 780, 400) * 2.4
+    # Full-depth AM at twice the mains frequency is what makes it buzz rather
+    # than drone — the same reason a real transformer hums at 100 Hz.
+    hum *= 0.5 + 0.5 * np.abs(np.sin(2 * np.pi * 100 * t))
+    arc = crackle(dur, 900, tone=4200) * 0.55
+
+    whine = np.sin(phase(glide(n, (0, 1500), (1, 320)))) * exp_decay(n, 0.25) * 0.35
+
+    envl = glide(n, (0, 1), (0.55, 0.8), (1, 0))
+    out = place(np.zeros(1), (hum + arc + whine) * envl, 0.05)
+    return place(out, strike, 0.0)
+
+
 def sfx_duck_squeak():
     # A squeeze toy is air forced through a reed: a narrow, strongly-resonant
     # band with a pitch that rises on the squeeze and falls as it springs back,
@@ -479,6 +505,7 @@ SOUNDS = {
     "candy-drop": sfx_candy_drop,
     "charge-up": sfx_charge_up,
     "duck-squeak": sfx_duck_squeak,
+    "wet-floor-zap": sfx_wet_floor_zap,
 }
 
 

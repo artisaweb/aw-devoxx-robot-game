@@ -298,6 +298,34 @@ export class Game {
   }
 
   /** Level 1 finished → tear it down, load Level 2 (Droid, first floor) in its place. */
+  /**
+   * A robot standing in the wet floor's puddle gets the same reaction that
+   * level's own attendee collision gives it — Voxxy short-circuits, Droid
+   * topples, Biggy stumbles — rather than a fourth, separate hazard response
+   * (the user: "should stun the robot in a similar way as a collision with an
+   * npc does"). Attendees are never zapped: they don't run on electricity, and
+   * more practically updateContactProps is only ever handed the robot.
+   *
+   * The invincibility window matches each branch's own, so the puddle can't
+   * land a second hit while the robot is still getting up from the first; the
+   * prop's own refractory (WET_FLOOR_REFRACTORY) is sized to outlast the
+   * longest of them and leave time to walk back out of the water.
+   */
+  private zapInPuddle(): void {
+    playSfx('wet-floor-zap');
+    if (this.level === 2) {
+      this.robot.topple(TOPPLE_DURATION, TOPPLE_RISE_DURATION);
+      this.robot.setInvincible(TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE);
+      setTimeout(() => playSfx('droid-getup'), TOPPLE_DURATION * 1000);
+    } else if (this.level === 3) {
+      this.robot.stun(BIGGY_STUMBLE_DURATION);
+      this.robot.setInvincible(BIGGY_STUMBLE_DURATION + BIGGY_POST_STUN_GRACE);
+    } else {
+      this.robot.stun(VOXXY_STUN_DURATION);
+      this.robot.setInvincible(VOXXY_STUN_DURATION + VOXXY_POST_STUN_GRACE);
+    }
+  }
+
   private advanceToLevel2(): void {
     this.dayScore.voxxy = this.swagRun!.score; // capture before teardown — see dayScore's own comment
     this.scene.remove(this.swagRun!.group);
@@ -536,6 +564,7 @@ export class Game {
         sizeScale: this.robot.sizeScale,
       })) {
         if (kind === 'duck') playSfx('duck-squeak');
+        if (kind === 'wet-floor') this.zapInPuddle();
       }
 
       if (this.level === 1) {

@@ -5,6 +5,7 @@ import { createRobotChargingDock, RobotChargingDock } from '../props/robotChargi
 import { createRubberDuck } from '../props/rubberDuck';
 import { createRecyclingStation } from '../props/recyclingBins';
 import { createTalkRatingKiosk } from '../props/talkRatingKiosk';
+import { createWetFloorSign } from '../props/wetFloorSign';
 import { EVENT_SIGNAGE, SPONSOR_SIGNAGE } from '../text/signage';
 
 // Rough blockout proportions from the real venue's floor plan
@@ -1199,6 +1200,11 @@ export function createExhibitionHall(): THREE.Group {
   // the column at (-35, -20), which is the nearest thing to it.
   addRubberDuck(hall, 'ground', { x: -40, y: 0, z: -25, rotationY: 2.4 });
 
+  // A spill right in front of the JAVA COFFEE machine — the one place in this
+  // hall where a puddle explains itself. Squarely in the lane between the
+  // booths, which is the point: it's a hazard to route around, not scenery.
+  addWetFloorSign(hall, 'ground', { x: 0, y: 0, z: -4, rotationY: 0 });
+
   return hall;
 }
 
@@ -1748,6 +1754,39 @@ function addTalkRatingKiosk(
       if (!kiosk.busy) void kiosk.activate('good');
     },
     colliders: [{ x: 0, z: 0, radius: KIOSK_RADIUS }],
+  });
+}
+
+// The puddle is ~1.3m x 0.9m and the sign stands at its back-left corner. No
+// collider at all: the whole point is that you walk *into* the water, so a
+// footprint that pushed a robot out of it would remove the hazard entirely.
+const WET_FLOOR_FOOTPRINT = 0.55;
+// Long enough to outlast the worst reaction it can trigger — Droid's topple is
+// 2.0 + 1.2 rise + 1.0 grace = 4.2s — plus time to walk back out of the water.
+// Shorter than that and a zap lands while the robot is still on the floor from
+// the last one, which is a stun-lock rather than a hazard.
+const WET_FLOOR_REFRACTORY = 6;
+// How far up the bolts climb. Droid's 1.9 is the tallest of the three, scaled
+// by the mover's own growth so they still reach the top of a grown Biggy
+// rather than zapping him at the knees.
+const WET_FLOOR_BOLT_HEIGHT = 1.9;
+
+function addWetFloorSign(
+  group: THREE.Group,
+  floor: Floor,
+  placement: { x: number; y: number; z: number; rotationY: number },
+): void {
+  const wet = createWetFloorSign();
+  addContactProp(group, floor, {
+    kind: 'wet-floor',
+    prop: wet,
+    placement,
+    footprint: WET_FLOOR_FOOTPRINT,
+    refractory: WET_FLOOR_REFRACTORY,
+    fire: (mover) => {
+      if (!wet.busy) void wet.activate({ height: WET_FLOOR_BOLT_HEIGHT * mover.sizeScale });
+    },
+    // No `colliders` — see WET_FLOOR_FOOTPRINT.
   });
 }
 
@@ -3125,6 +3164,12 @@ export function createFirstFloor(): THREE.Group {
   // own walkable gap is z -26.5..-21.5, so this stands clear at -19 and faces
   // the lane from the left strip.
   addTalkRatingKiosk(group, 'first', { x: -24.5, y, z: -19, rotationY: Math.PI / 2 });
+
+  // And one out in the middle of the long corridor, in the empty deep stretch
+  // between the quotes at z=-38 and z=-95 — a stretch whose only other feature
+  // is a charging dock, so there's now something to actually watch for on the
+  // way down it.
+  addWetFloorSign(group, 'first', { x: -9, y, z: -58, rotationY: 0 });
 
   // No DEVOXX letters along this corridor: a set stood in the left furniture
   // strip here for one pass, and the user cut it when the prop gained
