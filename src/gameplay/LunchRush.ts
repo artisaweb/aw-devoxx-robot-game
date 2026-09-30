@@ -708,6 +708,44 @@ export class LunchRush {
   }
 
   /** Advances the endless round. Returns whether Biggy stumbled (recoverable) or fell (permanent, see Robot.fallOver), plus an optional growth-milestone toast. */
+  /**
+   * The run-ending arithmetic for one hit, wherever it came from. Once Biggy
+   * is past FALL_THRESHOLD it takes FALL_HIT_COMBO_REQUIRED hits inside
+   * FALL_HIT_COMBO_WINDOW to put him down; below it, every hit is a
+   * recoverable stumble. Shared rather than inlined because the puddle
+   * (registerExternalHit) has to land on exactly the same ledger as an
+   * attendee — two copies would drift.
+   */
+  private bookHit(robot: Robot): { stumbled: boolean; fell: boolean; growthToast?: string } {
+    if (robot.sizeScale < FALL_THRESHOLD) return { stumbled: true, fell: false };
+    this.fallRiskComboCount =
+      this.survivedTime - this.lastFallRiskHitTime <= FALL_HIT_COMBO_WINDOW ? this.fallRiskComboCount + 1 : 1;
+    this.lastFallRiskHitTime = this.survivedTime;
+    if (this.fallRiskComboCount >= FALL_HIT_COMBO_REQUIRED) {
+      this.finished = true;
+      return { stumbled: false, fell: true };
+    }
+    return {
+      stumbled: true,
+      fell: false,
+      growthToast: this.fallRiskComboCount === FALL_HIT_COMBO_REQUIRED - 1 ? randomWobblingToast() : undefined,
+    };
+  }
+
+  /**
+   * Books a hit that didn't come from an attendee — the wet floor's puddle
+   * (Game.ts's zapInPuddle). Level 3's ending rule counts *hits*, not
+   * attendees specifically, so a zap that skipped this would be a free stun
+   * the fall logic can't see: three bumps from the crowd end a grown Biggy,
+   * but he could stand in the water all day. Respects and then re-arms
+   * hitCooldown, so a zap and an attendee can't both land in the same window.
+   */
+  registerExternalHit(robot: Robot): { stumbled: boolean; fell: boolean; growthToast?: string } {
+    if (this.finished || this.hitCooldown > 0) return { stumbled: false, fell: false };
+    this.hitCooldown = STUN_DURATION + POST_STUN_GRACE;
+    return this.bookHit(robot);
+  }
+
   update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean; drankBeer?: boolean; rechargedFrom?: 'coffee' | 'candy' } {
     if (this.finished) return { stumbled: false, fell: false, pickedUp: false };
 
@@ -1161,20 +1199,10 @@ export class LunchRush {
           d.targetX = ATTENDEE_SPAWN_POINT[0];
           d.targetZ = ATTENDEE_SPAWN_POINT[1];
         }
-        if (robot.sizeScale >= FALL_THRESHOLD) {
-          this.fallRiskComboCount =
-            this.survivedTime - this.lastFallRiskHitTime <= FALL_HIT_COMBO_WINDOW ? this.fallRiskComboCount + 1 : 1;
-          this.lastFallRiskHitTime = this.survivedTime;
-          if (this.fallRiskComboCount >= FALL_HIT_COMBO_REQUIRED) {
-            fell = true;
-            this.finished = true;
-          } else {
-            stumbled = true;
-            if (this.fallRiskComboCount === FALL_HIT_COMBO_REQUIRED - 1) growthToast = randomWobblingToast();
-          }
-        } else {
-          stumbled = true;
-        }
+        const outcome = this.bookHit(robot);
+        stumbled = stumbled || outcome.stumbled;
+        fell = fell || outcome.fell;
+        growthToast = outcome.growthToast ?? growthToast;
       }
     }
 
