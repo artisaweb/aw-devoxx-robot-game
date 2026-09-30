@@ -1384,19 +1384,6 @@ export function getDevoxxLetterColliders(floor: Floor): Collider[] {
   return floor === 'ground' ? groundFloorLetterColliders : firstFloorLetterColliders;
 }
 
-/**
- * Stands every glyph on both floors back up and un-retires its collider.
- *
- * Needed because the letters outlive the levels: one Robot walks all three, and
- * the two floor groups are built once (Game.ts's own field initializers) rather
- * than per level, so a glyph knocked over stays knocked over — which is the
- * right fiction *within* a day and the wrong one across days. Only restartDay
- * calls this; a letter toppled during Voxxy's run is still lying there when
- * Biggy walks the same floor at lunchtime, because it's the same day.
- *
- * Restoring the collider is what makes this more than cosmetic: without it a
- * letter would stand back up as something the robot walks straight through.
- */
 // Robot charging docks (src/props/robotChargingDock.js) — stand on the pad and
 // energy accrues while you stay there. A venue fixture rather than one level's
 // prop, so this file owns them the same way it owns the DEVOXX letters, not the
@@ -1803,6 +1790,19 @@ function addWetFloorSign(
   });
 }
 
+/**
+ * Stands every glyph on both floors back up and un-retires its collider.
+ *
+ * Needed because the letters outlive the levels: one Robot walks all three, and
+ * the two floor groups are built once (Game.ts's own field initializers) rather
+ * than per level, so a glyph knocked over stays knocked over — which is the
+ * right fiction *within* a day and the wrong one across days. Only restartDay
+ * calls this; a letter toppled during Voxxy's run is still lying there when
+ * Biggy walks the same floor at lunchtime, because it's the same day.
+ *
+ * Restoring the collider is what makes this more than cosmetic: without it a
+ * letter would stand back up as something the robot walks straight through.
+ */
 export function resetDevoxxLetters(): void {
   for (const placed of placedDevoxxLetters) {
     placed.prop.reset();
@@ -2126,18 +2126,18 @@ const AUDITORIUM_SCREEN_CHARS_PER_SECOND = 26;
 const AUDITORIUM_SCREEN_LINE_HOLD = 0.4; // pause after a line finishes typing, before it scrolls up
 const AUDITORIUM_SCREEN_CURSOR_BLINK = 0.5;
 
-// Module-level animation state for the one real screen in the game (Room 4
-// is the only built auditorium — see the first-floor layout note above
-// HALLWAY_CORRIDOR_HALF_WIDTH)
-// — a per-instance object would be over-engineering for a single screen.
-// Ticked from Game.ts's tick() (see updateAuditoriumScreen) since this file,
-// unlike KnowledgeRun.ts/SwagRun.ts, has no render-loop hook of its own.
 // Set once by createFirstFloor() — getHallwayPropColliders() reads the live
 // instance's own local collider-position getters and translates them by its
 // world position, same "visual and walkable geometry can't drift apart"
 // principle as every other zone in this file.
 let hallwayInstance: CinematicHallway | null = null;
 
+// Module-level animation state for the one real screen in the game (Room 4
+// is the only built auditorium — see the first-floor layout note above
+// HALLWAY_CORRIDOR_HALF_WIDTH)
+// — a per-instance object would be over-engineering for a single screen.
+// Ticked from Game.ts's tick() (see updateAuditoriumScreen) since this file,
+// unlike KnowledgeRun.ts/SwagRun.ts, has no render-loop hook of its own.
 let auditoriumScreenCtx: CanvasRenderingContext2D | null = null;
 let auditoriumScreenTexture: THREE.CanvasTexture | null = null;
 let auditoriumBufferStart = 0; // index (mod AUDITORIUM_SCREEN_CODE.length) of the topmost visible line
@@ -2368,12 +2368,6 @@ function createGlassDoorTexture(): THREE.CanvasTexture {
   return texture;
 }
 
-// The hall's far end (by Room 6/7, the last door pair) opens onto a real
-// staircase down to a small lower lobby with closed glass "exit" doors —
-// per the real venue photos and STAIR_ZONE's own comment. Built directly
-// here (not inside CinematicHallway.ts) since it's specific to this game's
-// own two-stair layout, same as Room 4's screen/stage — CinematicHallway
-// stays a generic, game-agnostic hallway shell.
 /**
  * One mid-corridor staircase down (see SIDE_STAIRS): a flight sunk into the
  * hall's own floor alongside a side wall, a small landing, and a closed double
@@ -2488,6 +2482,12 @@ function buildSideStair(group: THREE.Group, stair: SideStair): void {
   }
 }
 
+// The hall's far end (by Room 6/7, the last door pair) opens onto a real
+// staircase down to a small lower lobby with closed glass "exit" doors —
+// per the real venue photos and STAIR_ZONE's own comment. Built directly
+// here (not inside CinematicHallway.ts) since it's specific to this game's
+// own two-stair layout, same as Room 4's screen/stage — CinematicHallway
+// stays a generic, game-agnostic hallway shell.
 function buildStairsAndScreen(group: THREE.Group, y: number): void {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1f1d24, roughness: 1 });
   const stepMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
