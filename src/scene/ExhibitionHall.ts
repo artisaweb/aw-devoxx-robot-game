@@ -189,7 +189,8 @@ const ROOM4_ZONE: RaisedZone = {
 
 // Every zone whose floor isn't flat — i.e. every real auditorium, at full
 // (visual) size — for getFirstFloorHeightAt's tier lookup below. Only one
-// now (see the DECIDED note above), kept as an array for the loop shape
+// now (see the first-floor layout note above HALLWAY_CORRIDOR_HALF_WIDTH),
+// kept as an array for the loop shape
 // below rather than special-cased, in case a second real auditorium is ever
 // added back deliberately.
 const AUDITORIUM_ZONES: RaisedZone[] = [ROOM4_ZONE];
@@ -790,7 +791,8 @@ export const FIRST_FLOOR_ZONES: RaisedZone[] = [
   // and solid as any room's — recessed the same way every room is, so the
   // mover keeps its usual clearance against them too.
   recessedZone(HALL_ZONE, 'near', 'far', 'left', 'right'),
-  // Room 4 is the only real interior (see the DECIDED note above) — its own
+  // Room 4 is the only real interior (see the first-floor layout note above
+  // HALLWAY_CORRIDOR_HALF_WIDTH) — its own
   // solid outer walls are 'left'/'right' (the room's dead-end side wall) and
   // 'near' (the wall opposite the screen, capping the room on the corridor
   // side with nothing behind it). Recessing is about the *mover* needing
@@ -1209,8 +1211,10 @@ export function createExhibitionHall(): THREE.Group {
   // the column at (-35, -20), which is the nearest thing to it.
   addRubberDuck(hall, 'ground', { x: -40, y: 0, z: -25, rotationY: 2.4 });
 
-  // A spill right in front of the JAVA COFFEE machine — the one place in this
-  // hall where a puddle explains itself. Squarely in the lane between the
+  // A spill right in front of Level 1's JAVA COFFEE machine (COFFEE_MACHINE_POS,
+  // (0, -8)) — the one place in this hall where a puddle explains itself.
+  // Level 3 redresses the same floor with its JAVA machine over at (-11, -13)
+  // instead, so there the puddle stands on its own. Squarely in the lane between the
   // booths, which is the point: it's a hazard to route around, not scenery.
   addWetFloorSign(hall, 'ground', { x: 0, y: 0, z: -4, rotationY: 0 });
 
@@ -1404,7 +1408,7 @@ export function getDevoxxLetterColliders(floor: Floor): Collider[] {
 // anywhere on the first floor. That's the level where energy is the actual
 // currency: Room 4 is 16 jump-gated rows at JUMP_ENERGY_COST (20) each, 320
 // against a 100 cap, so reaching the back row was gated on standing still
-// waiting out ENERGY_REGEN_RATE while ten hazards roam a 32s round.
+// waiting out ENERGY_REGEN_RATE while seven hazards roam a 32s round.
 //
 // Deliberately no cooldown, unlike the kiosks. Those hand over a flat amount on
 // touch, so they need a re-trigger guard; a dock's cost is the seconds you
@@ -1441,7 +1445,7 @@ export function getChargingDockMarkers(floor: Floor): { x: number; z: number }[]
   return placedChargingDocks.filter((d) => d.floor === floor).map((d) => ({ x: d.x, z: d.z }));
 }
 
-/** Colliders for every dock's column (never its pad — that's 7cm, under AUTO_STEP_HEIGHT, and is meant to be stood on). */
+/** Colliders for every dock's column (never its pad — that's ~10cm at DOCK_SCALE, under AUTO_STEP_HEIGHT, and is meant to be stood on). */
 export function getChargingDockColliders(floor: Floor): Collider[] {
   return floor === 'ground' ? groundFloorDockColliders : firstFloorDockColliders;
 }
@@ -2123,7 +2127,8 @@ const AUDITORIUM_SCREEN_LINE_HOLD = 0.4; // pause after a line finishes typing, 
 const AUDITORIUM_SCREEN_CURSOR_BLINK = 0.5;
 
 // Module-level animation state for the one real screen in the game (Room 4
-// is the only built auditorium — see the DECIDED note near AUDITORIUM_ZONES)
+// is the only built auditorium — see the first-floor layout note above
+// HALLWAY_CORRIDOR_HALF_WIDTH)
 // — a per-instance object would be over-engineering for a single screen.
 // Ticked from Game.ts's tick() (see updateAuditoriumScreen) since this file,
 // unlike KnowledgeRun.ts/SwagRun.ts, has no render-loop hook of its own.
@@ -3161,16 +3166,17 @@ export function createFirstFloor(): THREE.Group {
   // pillar by ~2m — checked against the live colliders, not eyeballed — while
   // staying in the same left-hand strip and the same quote-to-quote stretch.
   addChargingDock(group, 'first', { x: hall.x - 8.5, y, z: hall.z - 6, rotationY: 0 });
-  // The far one serves the deep end, between the quotes at z=-85 and z=-115 —
-  // the longest stretch of the level with nothing on it, and the furthest point
-  // from anywhere else to recover. Opposite strip from the midpoint dock, so
+  // The far one serves the deep end, just past the quote at z=-95 on the way
+  // to the one by Stair C at z=-126 — the furthest point from anywhere else to
+  // recover. Opposite strip from the midpoint dock, so
   // the two don't read as a repeated fixture down one side.
   addChargingDock(group, 'first', { x: hall.x + 8.5, y, z: -100, rotationY: 0 });
 
   // A debugging duck out in the corridor, in the stretch the furniture declutter
   // opened up (see furnitureClearZones) so it's a thing standing alone on an
-  // empty floor rather than another object in a crowded strip. 8.4m to the
-  // nearest collider.
+  // empty floor rather than another object in a crowded strip. 7.4m
+  // centre-to-centre to the nearest collider, the rating kiosk by Room 4's
+  // door.
   addRubberDuck(group, 'first', { x: -19, y, z: -14, rotationY: 0.7 });
 
   // The recycling station in the right-hand strip, turned to face the walking
@@ -3184,10 +3190,10 @@ export function createFirstFloor(): THREE.Group {
   // the lane from the left strip.
   addTalkRatingKiosk(group, 'first', { x: -24.5, y, z: -19, rotationY: Math.PI / 2 });
 
-  // And one out in the middle of the long corridor, in the empty deep stretch
-  // between the quotes at z=-38 and z=-95 — a stretch whose only other feature
-  // is a charging dock, so there's now something to actually watch for on the
-  // way down it.
+  // And one out in the middle of the long corridor, in the deep stretch past
+  // the side stairwells — across the lane from the midpoint charging dock and
+  // just short of the quote at (-17.5, -62) — so there's something to
+  // actually watch for on the way down it.
   addWetFloorSign(group, 'first', { x: -9, y, z: -58, rotationY: 0 });
 
   // No DEVOXX letters along this corridor: a set stood in the left furniture
@@ -3203,8 +3209,8 @@ export function createFirstFloor(): THREE.Group {
   // hall... there should be stairs going down to the exit outside").
   buildStairsAndScreen(group, y);
 
-  // Room 4 — the one real, big, walkable auditorium (see the DECIDED note by
-  // ROOM4_ZONE above). Entrance faces the hall, on Room 4's right/east side.
+  // Room 4 — the one real, big, walkable auditorium (see the first-floor
+  // layout note above HALLWAY_CORRIDOR_HALF_WIDTH). Entrance faces the hall, on Room 4's right/east side.
   // No room number passed in: the "4" is signage on the corridor side of the
   // doorway, derived from the floor plan by CinematicHallway's own
   // roomNumberForSlot(), so there's no second place for it to disagree with.

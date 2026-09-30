@@ -118,9 +118,11 @@ const FIXTURE_TOP_HEIGHT = 0.3;
 // backdrop panel with an
 // oversized white numeral bleeding off the top edge, a black angled door
 // panel standing in front of it with a small blue check-in screen set into
-// it, and a free-standing kiosk on a pole to the side. Applied to the 7
-// closed (decorative) door slots only — Room 4's real open doorway keeps its
-// own tall-posts-no-leaf treatment from buildDoorFronts, untouched.
+// it, and a free-standing kiosk on a pole to the side. The full set is applied
+// to the 7 closed (decorative) door slots only — Room 4's real open doorway
+// keeps its own tall-posts-no-leaf treatment from buildDoorFronts, and borrows
+// just the red numbered backdrop (createRoomNumberPanel), set beside the
+// opening rather than across it.
 function createRoomNumberTexture(num: number): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
@@ -436,7 +438,7 @@ export class CinematicHallway extends THREE.Group {
       // A real, visible uplighter fixture at the pillar's base, fully in its
       // own assigned colour — not just a bare light source with nothing to
       // see or collide with (the user: "the lamp... should be real objects, now
-      // we can just walk through"). fixtureColliderPositions() gives it a
+      // we can just walk through"). pillarColliderPositions() gives it a
       // matching Collider.
       const fixtureMat = new THREE.MeshStandardMaterial({
         color: 0x0a0a0a,

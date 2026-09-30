@@ -18,7 +18,7 @@ export function cssHex(hex: number): string {
 // faces sideways INTO the aisle that runs past it (kiosks along both sides,
 // fronts turned toward the center walkway) — rotateBooth()/rotateCollider() turn a
 // booth's front from +z to face the hall center (+x for the left column at
-// x≈-18, -x for the right column at x≈18) around a given pivot point,
+// x≈-30, -x for the right column at x≈30) around a given pivot point,
 // without touching any of the booth's own local geometry.
 export function rotateBooth(booth: THREE.Object3D, cx: number, cz: number, angle: number): THREE.Object3D {
   const pivot = new THREE.Group();

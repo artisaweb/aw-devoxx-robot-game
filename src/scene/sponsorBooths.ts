@@ -37,21 +37,22 @@ export { KING_KIOSK_POS };
 // this module only places its statue landmark; KING_KIOSK_POS is exported so
 // the two sit next to each other without overlapping.
 //
-// Layout is spread across the open floor in two vertical columns (x ≈ -25 and
-// x ≈ 25) running the depth of the hall — matching a real expo hall (kiosks
-// scattered among the crowd, not backed against a wall) rather than lining
-// the walls. Deliberately clear of the
-// center lane (x ≈ 0), which is where COFFEE_MACHINE_POS (SwagRun.ts) already
-// sits — columns leave it standing clear, which also happens to roughly
-// match its real-world spot. "Devoxx Polo Pickup" is the one thing that's
-// actually wall-mounted, being a fixed venue fixture, not a booth.
+// Layout is spread across the open floor, mostly in two vertical columns
+// (x ≈ -30 and x ≈ 30, KING a little further out at 37-40) running the depth
+// of the hall, with Vaultius and the beer tap standing in nearer the middle at
+// x ≈ -10 and x ≈ 10 — matching a real expo hall (kiosks scattered among the crowd, not
+// backed against a wall) rather than lining the walls. Deliberately clear of
+// the center lane (x ≈ 0), which is where COFFEE_MACHINE_POS (SwagRun.ts)
+// already sits — columns leave it standing clear, which also happens to
+// roughly match its real-world spot.
 //
-// x≈±25 clears the column grid's last line (COLUMN_SPACING=10, columns at
-// x=±10/±20) with real margin, in the strip between the columns and the
-// outer wall (HALL_WIDTH/2 - wallClearance ≈ 28.8, so there's still a
-// comfortable buffer to the wall itself) — wide enough for each booth's own
-// internal gaps to work as a real hazard-evasion mechanic, not just a
-// pickup-reachability afterthought.
+// x≈±30 sits midway between two of the column grid's lines (COLUMN_SPACING=10,
+// columns at x=±5/±15/±25/±35) — see BOOTH_PLATFORM_ZONES's own comment in
+// ExhibitionHall.ts for why the booths moved out here after the 1.5x hall
+// resize — with a comfortable buffer to the outer wall (HALL_WIDTH/2 -
+// MOVER_CLEARANCE = 43.8) — wide enough for each booth's own internal gaps to
+// work as a real hazard-evasion mechanic, not just a pickup-reachability
+// afterthought.
 export const BEER_TAP_POS: [number, number] = [10, 15];
 // Built from the standalone beerTap.js generator (src/props/) — a full bar
 // setup on a 4.0x3.4m deck (counter, tap, two kegs, three stools, two high
