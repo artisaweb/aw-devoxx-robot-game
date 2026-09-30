@@ -29,6 +29,7 @@ import { createSponsorBooths, getBoothColliders, KING_KIOSK_POS } from '../scene
 import { createLighting } from '../scene/lighting';
 import { Robot } from '../entities/Robot';
 import { InputManager } from '../input/InputManager';
+import { TouchControls } from '../input/TouchControls';
 import { FollowCamera } from '../camera/FollowCamera';
 import { SwagRun, STUN_DURATION as VOXXY_STUN_DURATION, POST_STUN_GRACE as VOXXY_POST_STUN_GRACE, COFFEE_MACHINE_POS } from '../gameplay/SwagRun';
 import { KnowledgeRun, TOPPLE_DURATION, TOPPLE_RISE_DURATION, POST_TOPPLE_GRACE, OBSTACLE_DEFS } from '../gameplay/KnowledgeRun';
@@ -186,6 +187,7 @@ export class Game {
   private knowledgeRun: KnowledgeRun | undefined;
   private lunchRun: LunchRush | undefined;
   private hud: Hud;
+  private touchControls: TouchControls;
   // Last frame's held-key snapshot — lets tick() detect a genuinely fresh
   // press (see the awaitingStart and finished branches' own comments) rather
   // than a key that was already held when the screen in question appeared.
@@ -241,6 +243,12 @@ export class Game {
 
     this.followCamera = new FollowCamera(container.clientWidth / container.clientHeight);
     this.hud = new Hud(container);
+    // After the HUD so the controls sit on top of it; the intro panel's
+    // switch and the HUD's wording both follow the controls' own state.
+    this.touchControls = new TouchControls(container, this.input);
+    this.hud.setTouchMode(this.touchControls.isEnabled);
+    this.hud.onTouchToggle = () => this.touchControls.toggle();
+    this.touchControls.onChange = (on) => this.hud.setTouchMode(on);
 
     window.addEventListener('resize', this.onResize);
 
@@ -663,6 +671,9 @@ export class Game {
     }
 
     this.prevDownKeys = new Set(currentDown);
+    // Only now may a touch control's quick tap be let go — this frame has seen it.
+    this.input.endFrame();
+    this.touchControls.setNewDayVisible(this.level === 3 && this.lunchRun!.finished);
 
     if (this.level === 1) {
       this.hud.update(this.swagRun!.score, this.swagRun!.timeRemaining, this.swagRun!.finished, this.robot.energyFraction, this.swagRun!.timeBonus, 1);

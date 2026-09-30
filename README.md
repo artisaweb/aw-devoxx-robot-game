@@ -94,6 +94,12 @@ config, but `tsc` runs in `strict` mode, so a build failure is a real failure.
 Each level opens on a briefing panel and stays frozen until you press a movement key, so the
 timer doesn't start while you're still reading.
 
+**On a touch screen** — phone, tablet, a car's display — an on-screen stick moves the robot and
+BOOST and JUMP buttons sit under your right thumb; the day-end screen gets a NEW DAY button in
+place of `R`. They appear on their own on a device that reports a touch screen, or at the first
+touch on one that doesn't, and the briefing panel has a switch to turn them off or on (the choice
+is remembered). The keyboard keeps working either way.
+
 ### Debug shortcuts
 
 These are gated to localhost and ignored on the hosted build:

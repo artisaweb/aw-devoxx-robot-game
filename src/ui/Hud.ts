@@ -15,6 +15,11 @@ import {
   NEW_BEST_TEXT,
   personalBestText,
   PRESS_R_NEW_DAY,
+  TOUCH_INTRO_CONTROLS,
+  TOUCH_INTRO_START_HINT,
+  TOUCH_NEXT_PROMPT,
+  TOUCH_NEW_DAY,
+  touchToggleLabel,
 } from '../text/hudCopy';
 import {
   HALL_WIDTH,
@@ -66,6 +71,14 @@ export class Hud {
   private hungerFillEl: HTMLDivElement;
   private introEl: HTMLDivElement;
   private introHidden = false;
+  private introLevel: 1 | 2 | 3 = 1;
+  // Whether the on-screen touch controls are showing (see TouchControls.ts) —
+  // swaps every key-naming line for its tap-shaped twin in hudCopy.ts.
+  private touchMode = false;
+  /** Set by Game.ts — called when the intro panel's touch-controls switch is tapped. */
+  onTouchToggle: (() => void) | null = null;
+  private container: HTMLElement;
+  private lastMessageHtml = '';
   private minimapCanvas: HTMLCanvasElement;
   private minimapCtx: CanvasRenderingContext2D;
   private toastEl: HTMLDivElement;
@@ -82,6 +95,7 @@ export class Hud {
   private debugCopyFeedbackUntil = 0;
 
   constructor(container: HTMLElement) {
+    this.container = container;
     const bar = document.createElement('div');
     bar.style.cssText = `
       position: absolute; top: 0; left: 0; right: 0;
@@ -155,6 +169,7 @@ export class Hud {
       font-family: sans-serif; color: white; font-size: 32px; font-weight: 700;
       text-shadow: 0 2px 6px rgba(0,0,0,0.9); text-align: center;
       white-space: pre-line; display: none; pointer-events: none;
+      width: max-content; max-width: calc(100% - 48px);
     `;
 
     this.introEl = document.createElement('div');
@@ -164,7 +179,18 @@ export class Hud {
       text-shadow: 0 2px 6px rgba(0,0,0,0.9); pointer-events: none;
       background: rgba(0,0,0,0.35); padding: 24px 32px; border-radius: 12px;
       transition: opacity 0.4s ease; white-space: pre-line;
+      width: max-content; max-width: min(760px, calc(100% - 32px)); box-sizing: border-box;
     `;
+    // The panel itself ignores the pointer (so it never eats a tap meant for
+    // the game), but its touch-controls switch is a real button — delegated
+    // here once because showIntro() rewrites the panel's innerHTML.
+    this.introEl.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement | null;
+      const button = target?.closest('[data-touch-toggle]') as HTMLButtonElement | null;
+      if (!button || this.introHidden) return;
+      button.blur();
+      this.onTouchToggle?.();
+    });
     this.showIntro(1);
 
     this.toastEl = document.createElement('div');
@@ -208,6 +234,12 @@ export class Hud {
     container.appendChild(this.toastEl);
     container.appendChild(this.introEl);
     container.appendChild(this.modelLoadingEl);
+    // A phone rotating, or a car screen resizing its browser pane, can cross
+    // the compact threshold — re-render the briefing rather than just refit it.
+    window.addEventListener('resize', () => {
+      if (!this.introHidden) this.showIntro(this.introLevel);
+      this.fitCentered(this.messageEl);
+    });
 
     if (isLocalHost()) {
       this.debugCoordsEl = document.createElement('div');
@@ -407,6 +439,46 @@ export class Hud {
     if (this.introHidden) return;
     this.introHidden = true;
     this.introEl.style.opacity = '0';
+    // A faded-out panel's switch would otherwise stay tappable, invisibly.
+    const toggle = this.introEl.querySelector<HTMLButtonElement>('[data-touch-toggle]');
+    if (toggle) toggle.style.pointerEvents = 'none';
+  }
+
+  /**
+   * Shrinks a centred panel (the intro briefing, the end screens) until it
+   * fits between the HUD's top and bottom bars — a landscape phone or a car
+   * screen can be under 400px tall, where Level 3's briefing would otherwise
+   * run off the top and put its touch switch on top of the energy bar.
+   * Measures offsetWidth/Height, which a transform doesn't affect, so it's
+   * stable to call repeatedly.
+   */
+  private fitCentered(el: HTMLElement): void {
+    const H = this.container.clientHeight;
+    const W = this.container.clientWidth;
+    const reserveTop = 56; // the top score bar
+    // The bottom energy/hunger bars — and in portrait with touch controls on,
+    // the whole band the stick and buttons occupy, since there's no room
+    // beside them the way there is in landscape.
+    const reserveBottom = this.touchMode && H > W ? 230 : 56;
+    const availH = H - reserveTop - reserveBottom;
+    const availW = W - 24;
+    const h = el.offsetHeight;
+    const w = el.offsetWidth;
+    const scale = h > 0 && w > 0 ? Math.min(1, availH / h, availW / w) : 1;
+    el.style.top = `${reserveTop + availH / 2}px`;
+    el.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+  }
+
+  /** Short screens (landscape phones, in-car displays) get the intro panel's compact type sizes. */
+  private get compact(): boolean {
+    return this.container.clientHeight < 520;
+  }
+
+  /** Switches every key-naming line to its touch wording, re-rendering the intro panel if it's up. */
+  setTouchMode(on: boolean): void {
+    if (this.touchMode === on) return;
+    this.touchMode = on;
+    if (!this.introHidden) this.showIntro(this.introLevel);
   }
 
   /**
@@ -421,15 +493,30 @@ export class Hud {
    * (hideIntro() above just fades it) so it's always there to re-show.
    */
   showIntro(level: 1 | 2 | 3): void {
-    const { title, description, controls } = LEVEL_INTROS[level];
+    this.introLevel = level;
+    const { title, description } = LEVEL_INTROS[level];
+    const controls = this.touchMode ? TOUCH_INTRO_CONTROLS[level] : LEVEL_INTROS[level].controls;
+    const startHint = this.touchMode ? TOUCH_INTRO_START_HINT : INTRO_START_HINT;
+    // tabindex=-1 and the mousedown preventDefault keep the switch from ever
+    // taking focus: a focused button is "clicked" by Space, which is also the
+    // jump key that starts the level.
+    const c = this.compact;
+    this.introEl.style.padding = c ? '14px 20px' : '24px 32px';
     this.introEl.innerHTML = `
-      <div style="font-size: 28px; font-weight: 700; margin-bottom: 8px;">${title}</div>
-      <div style="font-size: 18px; margin-bottom: 16px;">${description}</div>
-      <div style="font-size: 16px; opacity: 0.9;">${controls}</div>
-      <div style="font-size: 16px; font-weight: 700; margin-top: 16px;">${INTRO_START_HINT}</div>
+      <div style="font-size: ${c ? 21 : 28}px; font-weight: 700; margin-bottom: ${c ? 4 : 8}px;">${title}</div>
+      <div style="font-size: ${c ? 14 : 18}px; margin-bottom: ${c ? 8 : 16}px;">${description}</div>
+      <div style="font-size: ${c ? 13 : 16}px; opacity: 0.9;">${controls}</div>
+      <div style="font-size: ${c ? 14 : 16}px; font-weight: 700; margin-top: ${c ? 8 : 16}px;">${startHint}</div>
+      <button type="button" data-touch-toggle tabindex="-1" onmousedown="event.preventDefault()" style="
+        margin-top: ${c ? 8 : 14}px; pointer-events: auto; cursor: pointer; touch-action: manipulation;
+        font: 600 14px sans-serif; color: white; padding: 8px 14px; border-radius: 18px;
+        background: ${this.touchMode ? 'rgba(46,204,113,0.35)' : 'rgba(255,255,255,0.12)'};
+        border: 1px solid rgba(255,255,255,0.5);
+      ">${touchToggleLabel(this.touchMode)}</button>
     `;
     this.introHidden = false;
     this.introEl.style.opacity = '1';
+    this.fitCentered(this.introEl);
   }
 
   update(
@@ -450,7 +537,7 @@ export class Hud {
     // at some meaningless fixed value.
     hungerFraction?: number,
   ): void {
-    const copy = LEVEL_COPY[level];
+    const copy = this.touchMode ? { ...LEVEL_COPY[level], nextPrompt: TOUCH_NEXT_PROMPT[level] } : LEVEL_COPY[level];
     this.scoreEl.textContent = scoreLabel(copy.itemLabel, score);
     this.timeEl.textContent = level === 3 ? survivedLabel(clockValue) : timeRemainingLabel(clockValue);
 
@@ -466,6 +553,7 @@ export class Hud {
     }
 
     this.messageEl.style.display = finished ? 'block' : 'none';
+    if (!finished) this.lastMessageHtml = '';
     if (finished) {
       if (level === 3 && dayEnd) {
         this.messageEl.innerHTML = this.buildDayEndHtml(dayEnd);
@@ -479,6 +567,11 @@ export class Hud {
           timeBonus > 0
             ? allCollectedMessage(copy.collectedNoun, timeBonus, copy.itemLabel, score, copy.nextPrompt)
             : timeUpMessage(copy.itemLabel, score, copy.nextPrompt);
+      }
+      // update() runs every frame; only re-measure when the screen's content changed.
+      if (this.messageEl.innerHTML !== this.lastMessageHtml) {
+        this.lastMessageHtml = this.messageEl.innerHTML;
+        this.fitCentered(this.messageEl);
       }
     }
   }
@@ -514,7 +607,7 @@ export class Hud {
         ${row(DAY_END_ROW_LABELS.total, dayEnd.total, true)}
       </div>
       ${bestLine ? `<div style="font-size: 15px; margin-top: 10px; opacity: 0.9;">${bestLine}</div>` : ''}
-      <div style="font-size: 18px; font-weight: 700; margin-top: 18px;">${PRESS_R_NEW_DAY}</div>
+      <div style="font-size: 18px; font-weight: 700; margin-top: 18px;">${this.touchMode ? TOUCH_NEW_DAY : PRESS_R_NEW_DAY}</div>
     `;
   }
 }
