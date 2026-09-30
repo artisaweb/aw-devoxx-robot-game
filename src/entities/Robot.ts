@@ -418,6 +418,14 @@ export class Robot {
         if (this.currentRobotId !== robotId) return;
         this.loadingModel = false;
 
+        // Carry the outgoing body's pose over. update() re-derives the topple
+        // tilt and the teeter roll every frame, but not once a level has
+        // finished, and fallOver() sets its tilt exactly once — so a model
+        // arriving after Biggy fell (or while Droid lies toppled behind the
+        // time-up screen) would otherwise stand him back up behind the end
+        // screen. GLTFLoader's scene root has an identity rotation, so there
+        // is nothing of the model's own to lose here.
+        model.rotation.copy(this.bodyGroup.rotation);
         this.mesh.remove(this.bodyGroup);
         this.bodyGroup = model;
         this.mesh.add(this.bodyGroup);
@@ -837,13 +845,19 @@ export class Robot {
     this.wornItems.push({ type, colorIndex, mesh });
   }
 
-  /** Rebuilds every currently-worn item against the real model's anchors — see the GLTF-load callback's comment for why this exists. */
+  /**
+   * Rebuilds every currently-worn item against the anchors of whichever body
+   * is on screen now — see the GLTF-load callback's comment for why this
+   * exists. Also called from showPlaceholderBody(), hence reading
+   * usingRealModel rather than assuming the real model.
+   */
   private reanchorWornItems(): void {
+    const profile = this.usingRealModel ? 'voxxy-real' : 'voxxy';
     let stickerSlot = 0;
     for (const item of this.wornItems) {
       this.mesh.remove(item.mesh);
       const slot = item.type === 'sticker' ? stickerSlot++ : 0;
-      item.mesh = createWornAccessory(item.type, 'voxxy-real', item.colorIndex, slot);
+      item.mesh = createWornAccessory(item.type, profile, item.colorIndex, slot);
       this.mesh.add(item.mesh);
     }
   }
