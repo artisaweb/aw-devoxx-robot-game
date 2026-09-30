@@ -311,7 +311,7 @@ export function createPlaceholder(robotId: string): { object: THREE.Object3D; ba
 // AI-generated + rigged models, served from public/models so each is a plain
 // static asset at runtime. Every robot's files follow the same convention:
 // `${robotId}.glb` (base mesh + the walk clip) plus optional
-// `${robotId}-run.glb` / `-jump.glb` / `-stun.glb` / `-idle.glb` siblings, one
+// `${robotId}-run.glb` / `-jump.glb` / `-stun.glb` siblings (see OPTIONAL_CLIPS), one
 // action baked per file (Blender exports one action at a time) rather than
 // one GLB with every clip bundled. Dropping a new sibling file into
 // public/models/ is the entire integration step for an EXISTING robot's new
@@ -345,7 +345,6 @@ const OPTIONAL_CLIPS: { name: RobotAnimationName; suffix: string }[] = [
   { name: 'run', suffix: 'run' },
   { name: 'jump', suffix: 'jump' },
   { name: 'stun', suffix: 'stun' },
-  { name: 'idle', suffix: 'idle' },
 ];
 
 /** Loads the named robot's real model plus whatever animation clips are available. */
