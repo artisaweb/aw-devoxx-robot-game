@@ -22,7 +22,9 @@ export type KnowledgeQuoteId =
   | 'demo-worked-yesterday'
   | 'ai-code-review'
   | 'ai-confident-wrong'
-  | 'technical-debt-loan';
+  | 'technical-debt-loan'
+  | 'live-coding-audience'
+  | 'hallway-track';
 
 export const KNOWLEDGE_QUOTES: Record<KnowledgeQuoteId, string> = {
   'stream-single-use': 'A stream is like a condom: do not reuse.',
@@ -37,4 +39,9 @@ export const KNOWLEDGE_QUOTES: Record<KnowledgeQuoteId, string> = {
   'ai-code-review': "AI didn't replace developers. It just gave them more code to review.",
   'ai-confident-wrong': "LLMs are confident. That's not the same as correct.",
   'technical-debt-loan': 'Technical debt is a loan you take out from Future You.',
+  // The two below are placed for where they sit, not just scattered: this one
+  // is on Room 4's podium, directly under the live-coding screen...
+  'live-coding-audience': 'Live coding is just debugging, with an audience.',
+  // ...and this one on a table out in the corridor, which is the hallway track.
+  'hallway-track': 'The hallway track has the best talks and no recordings.',
 };
