@@ -708,7 +708,7 @@ export class LunchRush {
   }
 
   /** Advances the endless round. Returns whether Biggy stumbled (recoverable) or fell (permanent, see Robot.fallOver), plus an optional growth-milestone toast. */
-  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean } {
+  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean; drankBeer?: boolean } {
     if (this.finished) return { stumbled: false, fell: false, pickedUp: false };
 
     this.survivedTime += dt;
@@ -862,6 +862,7 @@ export class LunchRush {
     this.beerTapCooldown = Math.max(0, this.beerTapCooldown - dt);
     const beerTapAvailable = this.beerTapCooldown <= 0;
     beerTap.setOutOfStock(!beerTapAvailable);
+    let drankBeer = false;
     if (beerTapAvailable) {
       const dx = robotX - BEER_TAP_POS[0];
       const dz = robotZ - BEER_TAP_POS[1];
@@ -869,6 +870,7 @@ export class LunchRush {
         this.hunger = Math.min(HUNGER_MAX, this.hunger + HUNGER_RESTORE_PER_SANDWICH);
         robot.applyTipsy(BEER_TAP_TIPSY_DURATION);
         this.beerTapCooldown = BEER_TAP_COOLDOWN;
+        drankBeer = true;
         if (!beerTap.busy) void beerTap.activate();
       }
     }
@@ -1182,6 +1184,6 @@ export class LunchRush {
       return false;
     });
 
-    return { stumbled, fell, growthToast, pickedUp };
+    return { stumbled, fell, growthToast, pickedUp, drankBeer };
   }
 }

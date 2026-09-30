@@ -43,6 +43,11 @@ const BEST_SCORE_KEY = 'dayAtDevoxx.bestScore';
 // Seconds remaining at which the timer-low SFX fires (Levels 1-2 only —
 // Level 3 has no timer). One-shot on crossing this, not a per-second replay.
 const TIMER_LOW_THRESHOLD = 5;
+// Length of beer-pour.wav, so Biggy's burp lands after the glass is full
+// rather than over the pour. Kept in sync by hand with tools/gen_sfx.py's
+// sfx_beer_pour() — the WAVs are static files, not decoded buffers, so
+// nothing in the runtime knows their duration.
+const BEER_POUR_DURATION = 1.25;
 // The keys that start a level from its intro panel — exactly the movement/
 // boost/jump keys Robot.update() itself reads, nothing else. A control key
 // rather than literally any key (the user: "would pause the game until the
@@ -506,7 +511,7 @@ export class Game {
       if (charge > 0) this.robot.restoreEnergy(charge);
 
       if (this.level === 1) {
-        const { stunned, pickedUp } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);
+        const { stunned, pickedUp, drankBeer } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);
         if (stunned) {
           this.robot.stun(VOXXY_STUN_DURATION);
           // Purely visual — SwagRun.ts's own stunCooldown already blocks a
@@ -516,6 +521,7 @@ export class Game {
           playSfx('voxxy-shortcircuit');
         }
         if (pickedUp) playSfx('pickup');
+        if (drankBeer) playSfx('beer-pour');
         this.robot.setCarriedItemCount(this.swagRun!.score);
       } else if (this.level === 2) {
         // Hazards get the row-wall-free list (see firstFloorHazardColliders'
@@ -543,7 +549,7 @@ export class Game {
         }
         if (toppleToast) this.hud.showQuoteToast(toppleToast);
       } else {
-        const { stumbled, fell, growthToast, pickedUp } = this.lunchRun!.update(dt, this.robot, activeColliders, this.beerTap);
+        const { stumbled, fell, growthToast, pickedUp, drankBeer } = this.lunchRun!.update(dt, this.robot, activeColliders, this.beerTap);
         if (fell) {
           this.robot.fallOver();
           playSfx('biggy-fall');
@@ -553,6 +559,17 @@ export class Game {
           playSfx('hit');
         }
         if (pickedUp) playSfx('pickup');
+        if (drankBeer) {
+          playSfx('beer-pour');
+          // Biggy alone gets the burp (the user: "especially when it is Biggy,
+          // a burp is allowed") — level 3 is the only level he's in, so the
+          // branch is the check. Scheduled off BEER_POUR_DURATION rather than
+          // hooked to the pour finishing: playSfx is fire-and-forget by design
+          // and has no completion callback, and the tap's own cooldown is far
+          // longer than this delay, so two pours can't overlap into a
+          // double-burp.
+          setTimeout(() => playSfx('biggy-burp'), BEER_POUR_DURATION * 1000);
+        }
         if (growthToast) this.hud.showQuoteToast(growthToast);
       }
 

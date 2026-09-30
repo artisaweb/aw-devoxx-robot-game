@@ -321,7 +321,7 @@ export class SwagRun {
   }
 
   /** Advances the round — returns whether the robot was just splashed by a hazard, and whether a pickup was just collected (for the SFX layer, see Game.ts). */
-  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stunned: boolean; pickedUp: boolean } {
+  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stunned: boolean; pickedUp: boolean; drankBeer?: boolean } {
     if (this.finished) return { stunned: false, pickedUp: false };
 
     this.timeRemaining = Math.max(0, this.timeRemaining - dt);
@@ -407,12 +407,14 @@ export class SwagRun {
     this.beerTapCooldown = Math.max(0, this.beerTapCooldown - dt);
     const beerTapAvailable = this.beerTapCooldown <= 0;
     beerTap.setOutOfStock(!beerTapAvailable);
+    let drankBeer = false;
     if (beerTapAvailable) {
       const dx = robotX - BEER_TAP_POS[0];
       const dz = robotZ - BEER_TAP_POS[1];
       if (dx * dx + dz * dz < BEER_TAP_RADIUS * BEER_TAP_RADIUS) {
         robot.applyTipsy(BEER_TAP_TIPSY_DURATION);
         this.beerTapCooldown = BEER_TAP_COOLDOWN;
+        drankBeer = true;
         if (!beerTap.busy) void beerTap.activate();
       }
     }
@@ -563,6 +565,6 @@ export class SwagRun {
       }
     }
 
-    return { stunned, pickedUp };
+    return { stunned, pickedUp, drankBeer };
   }
 }
