@@ -13,7 +13,7 @@ import {
   getFirstFloorHeightAt,
   isOnFirstFloor,
 } from '../scene/ExhibitionHall';
-import { createVoxxyMesh, loadRobotAsset, RobotAnimationName } from './voxxyModel';
+import { createPlaceholder, loadRobotAsset, RobotAnimationName } from './voxxyModel';
 import { SwagType, HEAD_SLOT_TYPES, createWornAccessory, createGlowSprite, createTipsyBugSprite } from '../gameplay/swagAccessories';
 import { createSpeechBubble, SpeechBubble } from '../gameplay/speechBubble';
 
@@ -350,9 +350,12 @@ export class Robot {
     this.mesh.position.x = 0;
     this.mesh.position.z = 15;
 
-    this.bodyGroup = createVoxxyMesh();
+    // Empty to start: loadRobotModel() at the end of this constructor puts
+    // Voxxy's own stand-in in synchronously, through the same one code path a
+    // later level transition uses. This assignment only exists because the
+    // field has to be definitely assigned before that call.
+    this.bodyGroup = new THREE.Group();
     this.mesh.add(this.bodyGroup);
-    this.collectTintableParts();
 
     this.boostCore = createGlowSprite(BOOST_CORE_SIZE, 0.8);
     this.boostCore.material.color.set(BOOST_CORE_COLOR);
@@ -393,15 +396,21 @@ export class Robot {
   /**
    * Loads (or switches to) the named robot's real GLTF model + animation
    * clips — called once from the constructor for the game's starting robot
-   * (Voxxy), and again by setRobotModel() at a level transition. The current
-   * bodyGroup (placeholder or a previously-loaded robot) stays exactly as-is
-   * until the new model actually finishes loading — no placeholder flash on
-   * a switch, since whatever was already showing is a perfectly fine stand-in
-   * for the brief load window.
+   * (Voxxy), and again by setRobotModel() at a level transition.
+   *
+   * This robot's own low-poly stand-in goes in immediately, so play can start
+   * on the right silhouette while the real model downloads behind it. It used
+   * to leave whatever body was already showing in place instead, on the
+   * reasoning that a stand-in flash was worse than a brief mismatch — but with
+   * every robot having a stand-in of its own, the mismatch is the worse of the
+   * two: Level 2 opened with Voxxy playing Droid, and Level 3 with Droid
+   * playing Biggy, for however long 10-34 MB per clip takes to arrive. If the
+   * real model never arrives at all, the stand-in is simply what you play as.
    */
   private loadRobotModel(robotId: string): void {
     this.currentRobotId = robotId;
     this.loadingModel = true;
+    this.showPlaceholderBody(robotId);
     loadRobotAsset(robotId)
       .then(({ model, clips }) => {
         // A newer switch superseded this in-flight load — drop this result,
@@ -442,8 +451,29 @@ export class Robot {
       })
       .catch((err) => {
         if (this.currentRobotId === robotId) this.loadingModel = false;
-        console.warn(`${robotId} GLTF model failed to load, keeping the previous body`, err);
+        console.warn(`${robotId} GLTF model failed to load, staying on its low-poly stand-in`, err);
       });
+  }
+
+  /**
+   * Swaps bodyGroup for a robot's procedural stand-in. Mirrors the real
+   * model's own swap above, minus the parts a primitives mesh has no use for:
+   * there are no clips, so the mixer and action table are cleared rather than
+   * left pointing at the body that was just removed.
+   */
+  private showPlaceholderBody(robotId: string): void {
+    const { object, baseScale } = createPlaceholder(robotId);
+    this.mesh.remove(this.bodyGroup);
+    this.bodyGroup = object;
+    this.mesh.add(this.bodyGroup);
+    this.collectTintableParts();
+    this.baseBodyScale = baseScale;
+    this.applyBodyScale();
+    this.usingRealModel = false;
+    this.mixer = null;
+    this.actions = {};
+    this.currentActionName = null;
+    this.reanchorWornItems();
   }
 
   /**
