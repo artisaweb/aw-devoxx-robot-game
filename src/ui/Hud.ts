@@ -476,7 +476,7 @@ export class Hud {
     ctx.stroke();
   }
 
-  /** Hides the intro/controls panel as soon as the player presses any key. */
+  /** Hides the intro/controls panel — Game.ts calls this on the first fresh START_KEYS press, not on any key. */
   hideIntro(): void {
     if (this.introHidden) return;
     this.introHidden = true;
