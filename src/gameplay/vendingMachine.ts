@@ -4,8 +4,9 @@ import { createCandyGrabbingMachine as createCandyGrabbingMachineAsset, CandyGra
 // Half-width of the kiosk body (1.1 wide) — Game.ts registers it as each
 // kiosk's collider, so kiosks are solid obstacles instead of walk-through
 // props. The mover's own clearance (WALL_CLEARANCE, see Robot.ts) is added on
-// top of it by the push-out, which is why SwagRun.ts/LunchRush.ts size their
-// touch radii as this plus WALL_CLEARANCE.
+// top of it by the push-out, which is why SwagRun.ts sizes its touch radii as
+// this plus WALL_CLEARANCE, and LunchRush.ts as this plus WALL_CLEARANCE at
+// Biggy's maximum growth.
 export const KIOSK_COLLIDER_RADIUS = 0.55;
 
 export type { CoffeeVendingMachine };
