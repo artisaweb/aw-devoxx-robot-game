@@ -176,8 +176,7 @@ const ATTENDEE_SPAWN_POINT: [number, number] = [0, 17]; // walking in from the e
 // back along the table) rather than the old -x (further left) — the old
 // direction ran the queue line straight through where the new Stairs A
 // enclosure now stands. At MAX_ATTENDEES * QUEUE_SPACING = 19.6m, the queue
-// now ends around x = 7.6, still inside the safe |x| <= 13.3 band (see
-// SLOT_POSITIONS' own comment) and nowhere near either enclosure.
+// now ends around x = 7.6, nowhere near either enclosure.
 const QUEUE_ANCHOR: [number, number] = [-12, -18];
 const QUEUE_DIR: [number, number] = [1, 0];
 const QUEUE_SPACING = 1.4;
@@ -193,7 +192,7 @@ const QUEUE_PATIENCE_MAX = 18;
 // used to serve exactly one at a time ("a real line serves one person at a
 // time"), which was the other half of why the outer tables were safe: one
 // grabber, always sent to the nearest slot, never got past the middle of the
-// buffet. Three keeps the line reading as a line while putting enough traffic
+// buffet. Five keeps the line reading as a line while putting enough traffic
 // on the floor that no table stays untouched for long.
 const MAX_CONCURRENT_GRABBERS = 5;
 // Per second, per queued diner, while a grabber slot is free — a staggered
@@ -412,7 +411,6 @@ function findWalkParts(mesh: THREE.Object3D): Pick<Diner, 'legL' | 'legR' | 'arm
   return parts;
 }
 
-/** Steps (x, z) toward (targetX, targetZ) at `speed`, returning the new position/heading and whether it arrived this step. */
 // How far ahead a diner looks for something to walk around. Comfortably more
 // than the one step it is about to take, so the turn begins while there's
 // still room to make it rather than after the push-out has already stalled it.
@@ -497,9 +495,6 @@ function headingAvoiding(
   if (centerDist <= clearance) return Math.atan2(-relX, -relZ);
 
   // Aim at the blocker's edge rather than its center: offset from the bearing
-  // to it by the half-angle its clearance circle subtends, to whichever side
-  // we're already leaning, so the diner takes the shorter way around.
-  // Aim at the blocker's edge rather than its center: offset from the bearing
   // to it by the half-angle its clearance circle subtends.
   //
   // Which side to pass on is decided ONCE, on the frame the detour starts,
@@ -521,6 +516,7 @@ function headingAvoiding(
   return toBlocker + detour.side * tangentOffset;
 }
 
+/** Steps (x, z) toward (targetX, targetZ) at `speed`, returning the new position/heading and whether it arrived this step. */
 function stepToward(
   x: number,
   z: number,
@@ -546,7 +542,7 @@ function stepToward(
 /**
  * See STUCK_ESCAPE_DISTANCE's own comment. Call once per frame for any diner
  * in a state that's actively steering somewhere ('approaching'/'chasing'/
- * 'grabbing'/'leaving') — not 'queued' (stationary by design). 'leaving' in
+ * 'grabbing'/'wandering'/'leaving') — not 'queued' (stationary by design). 'leaving' in
  * particular needs this just as much as the others: the end-of-update()
  * removal filter only drops a diner once it's within 0.5m of
  * ATTENDEE_SPAWN_POINT, so one wedged against a table on its way out would
@@ -625,7 +621,6 @@ export class LunchRush {
     return this.hunger / HUNGER_MAX;
   }
 
-  /** Nearest currently-stocked slot to (x, z), or null if the whole buffet is empty right now. */
   /**
    * A stocked sandwich slot for a diner to go fetch, chosen uniformly at
    * random among those nobody is already on their way to.
@@ -707,7 +702,6 @@ export class LunchRush {
     });
   }
 
-  /** Advances the endless round. Returns whether Biggy stumbled (recoverable) or fell (permanent, see Robot.fallOver), plus an optional growth-milestone toast. */
   /**
    * The run-ending arithmetic for one hit, wherever it came from. Once Biggy
    * is past FALL_THRESHOLD it takes FALL_HIT_COMBO_REQUIRED hits inside
@@ -746,6 +740,7 @@ export class LunchRush {
     return this.bookHit(robot);
   }
 
+  /** Advances the endless round. Returns whether Biggy stumbled (recoverable) or fell (permanent, see Robot.fallOver), plus an optional growth-milestone toast. */
   update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean; drankBeer?: boolean; rechargedFrom?: 'coffee' | 'candy' } {
     if (this.finished) return { stumbled: false, fell: false, pickedUp: false };
 
@@ -1142,9 +1137,10 @@ export class LunchRush {
       //    the end of update()); pushing them apart there would stop some of
       //    them from ever reaching that removal radius, leaking diners
       //    forever in an endless-mode run.
-      // That leaves 'approaching' and 'chasing' diners actually separated —
-      // the genuinely free-moving states where two diners converging on the
-      // same spot is an accident, not a designed formation.
+      // That leaves 'approaching', 'grabbing', 'wandering' and 'chasing'
+      // diners actually separated — the genuinely free-moving states where two
+      // diners converging on the same spot is an accident, not a designed
+      // formation.
       if (d.state !== 'queued' && d.state !== 'leaving') {
         for (const other of this.diners) {
           if (other === d) continue;
