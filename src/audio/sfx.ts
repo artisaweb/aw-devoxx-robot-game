@@ -11,7 +11,8 @@ export type SfxName =
   | 'biggy-burp'
   | 'coffee-pour'
   | 'candy-drop'
-  | 'charge-up';
+  | 'charge-up'
+  | 'duck-squeak';
 
 const DEFAULT_VOLUME = 0.55;
 

@@ -354,6 +354,25 @@ def sfx_biggy_fall():
     return place(out, wobble, 0.38)
 
 
+def sfx_duck_squeak():
+    # A squeeze toy is air forced through a reed: a narrow, strongly-resonant
+    # band with a pitch that rises on the squeeze and falls as it springs back,
+    # plus the breathy hiss of the air itself. Two squeaks, the second smaller,
+    # which is what a duck actually does when you stand on it and step off.
+    def squeak(dur, f_lo, f_hi, level):
+        n = int(dur * SR)
+        f = glide(n, (0, f_lo), (0.35, f_hi), (1, f_lo * 0.85))
+        reed = saw(f) * 0.6 + square(f, 0.3) * 0.4
+        voiced = formants(reed, [(f * 2.1, 220), (f * 4.3, 500)])
+        air = highpass(lowpass(noise(n), 6000), 1800) * 0.12
+        return (voiced + air) * glide(n, (0, 0), (0.08, 1), (0.7, 0.9), (1, 0)) * level
+
+    out = np.zeros(1)
+    out = place(out, squeak(0.26, 620, 1150, 1.0), 0.0)
+    out = place(out, squeak(0.19, 540, 900, 0.55), 0.30)
+    return out
+
+
 def sfx_coffee_pour():
     # Pump hum, then the shot itself. Same climbing-resonance trick as the beer
     # pour, an octave up and much shorter — a cup, not a pint — then a ceramic
@@ -459,6 +478,7 @@ SOUNDS = {
     "coffee-pour": sfx_coffee_pour,
     "candy-drop": sfx_candy_drop,
     "charge-up": sfx_charge_up,
+    "duck-squeak": sfx_duck_squeak,
 }
 
 
