@@ -45,12 +45,10 @@ meter hitting zero, or three collisions landing close together once he's grown p
 The lunch queue is the hazard — walk too close to someone waiting, or eat a sandwich right under
 their nose, and they'll break off and come after you.
 
-> The Level 3 shot above is the opening moment, before the buffet stocks and the queue forms.
-
 ### Scoring
 
 - **Levels 1 and 2:** a point for every piece of swag or quote. Each one also puts 3 seconds back
-  on the clock, and the candy kiosk is worth 5. The rounds start short (20 s and 32 s) on
+  on the clock, and Level 1's candy kiosk is worth 5. The rounds start short (20 s and 32 s) on
   purpose, so the clock is something you keep feeding, not something you wait out.
 - **Clear a level early** and the seconds you have left are multiplied by what you collected and
   added as a bonus. Swag knocked out of your hands never comes back, so a late collision still
@@ -69,7 +67,7 @@ The venue isn't scenery; most of what's standing around reacts when a robot walk
   Voxxy is stunned, Droid goes over, and for Biggy it counts as a hit, so a grown Biggy can lose
   the run to it.
 - The **coffee machine** and **candy kiosk** give energy (the candy also gives time), **charging
-  pads** upstairs refill it while you stand on them, and the **beer tap** makes you tipsy.
+  pads** on both floors refill it while you stand on them, and the **beer tap** makes you tipsy.
 - A **rubber duck** squeaks, the **recycling station** sorts whatever you bump into it, and the
   **talk-rating kiosk** upstairs takes your vote.
 - Room 4's stage screen shows **live coding** being typed while you play, under the DEVOXX
@@ -123,7 +121,7 @@ config, but `tsc` runs in `strict` mode, so a build failure is a real failure.
 | `Space` | Jump (drains energy) |
 | `R` | Restart the day, on the end screen |
 
-Each level opens on a briefing panel and stays frozen until you press a movement key, so the
+Each level opens on a briefing panel and stays frozen until you press a control key (move, boost or jump), so the
 timer doesn't start while you're still reading.
 
 **On a touch screen** — phone, tablet, a car's display — an on-screen stick moves the robot and
