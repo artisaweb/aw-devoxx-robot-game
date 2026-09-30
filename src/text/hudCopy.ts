@@ -115,10 +115,12 @@ export const TOUCH_INTRO_CONTROLS: Record<1 | 2 | 3, string> = {
   2: 'Left stick — move&#10;BOOST — hold to boost (uses ⚡ energy)&#10;JUMP — jump (uses ⚡ energy)',
   3: 'Left stick — move&#10;BOOST — hold to boost (uses ⚡ energy)&#10;JUMP — jump onto a table to eat',
 };
-export const TOUCH_INTRO_START_HINT = 'Touch a control to start';
+// "Move the stick" rather than "touch": a tap on the stick's centre sits in
+// its dead zone and presses nothing, so "touch any control" wasn't true.
+export const TOUCH_INTRO_START_HINT = 'Move the stick or tap JUMP or BOOST to start';
 export const TOUCH_NEXT_PROMPT: Record<1 | 2 | 3, string> = {
-  1: 'Touch any control for Level 2',
-  2: 'Touch any control for Level 3',
+  1: 'Move the stick or tap JUMP or BOOST for Level 2',
+  2: 'Move the stick or tap JUMP or BOOST for Level 3',
   3: 'Tap NEW DAY to start a new day',
 };
 export const TOUCH_NEW_DAY = 'Tap NEW DAY to start a new day';
