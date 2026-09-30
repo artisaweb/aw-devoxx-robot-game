@@ -49,7 +49,7 @@ const TIMER_LOW_THRESHOLD = 5;
 // rather than over the pour. Kept in sync by hand with tools/gen_sfx.py's
 // sfx_beer_pour() — the WAVs are static files, not decoded buffers, so
 // nothing in the runtime knows their duration.
-const BEER_POUR_DURATION = 1.25;
+const BEER_POUR_DURATION = 1.21;
 // The keys that start a level from its intro panel — exactly the movement/
 // boost/jump keys Robot.update() itself reads, nothing else. A control key
 // rather than literally any key (the user: "would pause the game until the
@@ -318,8 +318,22 @@ export class Game {
       this.robot.setInvincible(TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE);
       setTimeout(() => playSfx('droid-getup'), TOPPLE_DURATION * 1000);
     } else if (this.level === 3) {
-      this.robot.stun(BIGGY_STUMBLE_DURATION);
-      this.robot.setInvincible(BIGGY_STUMBLE_DURATION + BIGGY_POST_STUN_GRACE);
+      // Routed through LunchRush rather than stunning directly: level 3 ends on
+      // three hits close together once Biggy is big enough, and that ledger
+      // counts hits, not attendees. A zap that bypassed it would be a free
+      // stun — he could stand in the puddle all day while three bumps from the
+      // crowd put him down. Which does mean a grown Biggy chased across this
+      // puddle can lose the run to it; that is the same deal the crowd offers,
+      // and unlike the crowd the puddle has a metre-high yellow sign on it.
+      const { stumbled, fell, growthToast } = this.lunchRun!.registerExternalHit(this.robot);
+      if (fell) {
+        this.robot.fallOver();
+        playSfx('biggy-fall');
+      } else if (stumbled) {
+        this.robot.stun(BIGGY_STUMBLE_DURATION);
+        this.robot.setInvincible(BIGGY_STUMBLE_DURATION + BIGGY_POST_STUN_GRACE);
+      }
+      if (growthToast) this.hud.showQuoteToast(growthToast);
     } else {
       this.robot.stun(VOXXY_STUN_DURATION);
       this.robot.setInvincible(VOXXY_STUN_DURATION + VOXXY_POST_STUN_GRACE);
