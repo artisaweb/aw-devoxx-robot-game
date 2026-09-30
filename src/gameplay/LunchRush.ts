@@ -663,10 +663,20 @@ export class LunchRush {
   }
 
   private spawnDiner(): void {
-    // Only counts diners actually headed for/standing in the line — chasers
-    // and diners on their way out don't hold a slot, or a churning queue
-    // would eventually assign two attendees the same spot and stack them.
-    const queueIndex = this.diners.filter((d) => d.state === 'approaching' || d.state === 'queued').length;
+    // The lowest queue spot nobody is headed for or standing on. Not simply
+    // "how many are in line": nobody shuffles forward when someone leaves the
+    // line (to grab food, give up, or chase), so once the front diner left,
+    // that count pointed at a spot still occupied further back, and the new
+    // arrival walked into the person standing there. Chasers and diners on
+    // their way out hold no spot.
+    const taken = new Set<number>();
+    for (const d of this.diners) {
+      if (d.state !== 'approaching' && d.state !== 'queued') continue;
+      const along = (d.targetX - QUEUE_ANCHOR[0]) * QUEUE_DIR[0] + (d.targetZ - QUEUE_ANCHOR[1]) * QUEUE_DIR[1];
+      taken.add(Math.round(along / QUEUE_SPACING));
+    }
+    let queueIndex = 0;
+    while (taken.has(queueIndex)) queueIndex += 1;
     const archetype = ATTENDEE_ARCHETYPES[this.nextArchetype % ATTENDEE_ARCHETYPES.length];
     this.nextArchetype += 1;
     const mesh = createAttendeeMesh(archetype);
