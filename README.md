@@ -117,12 +117,16 @@ tab except a personal-best score in `localStorage`.
   transitions swap its GLTF model and rig rather than building a new one. Each level is its own
   engine class (`SwagRun`, `KnowledgeRun`, `LunchRush`) with its own scene group, orchestrated by
   `core/Game.ts`.
-- **Two floors, joined by doors.** The real venue's stairwells sit behind closed doors nobody
-  walks through, so the floors are connected by door teleports instead of modelled staircases —
-  which also lets each floor have a completely separate visual identity.
-- **Geometry over asset packs.** The venue, the booths, the buffet, the vending machines and the
-  DEVOXX letters are all generated as Three.js geometry in code. The only external model files are
-  the three robots themselves (`public/models/*.glb`).
+- **Two floors, not architecturally connected.** The real venue's stairwells sit behind closed
+  doors nobody walks through, so nothing in the game joins the floors: every visible stair and
+  door is real geometry that dead-ends, and it's the level transition itself that moves the robot
+  from one map to the other. Which also lets each floor have a completely separate visual
+  identity, since they never have to line up.
+- **Geometry over asset packs.** The venue, the booths, the buffet, the vending machines, the
+  DEVOXX letters, the charging pads, the recycling bins, the rating kiosk, the wet-floor sign and
+  the rubber duck are all generated as Three.js geometry in code. The only external model files
+  are the three robots themselves (`public/models/*.glb`) — and each of those also has a
+  primitives stand-in that plays in its place until it loads, or instead of it if it never does.
 - **Sound is synthesised, not sampled.** `tools/gen_sfx.py` generates every `.wav` in
   `public/audio/` from oscillators and noise — run it with `python3 tools/gen_sfx.py` (needs
   `numpy`) to retune a sound.
