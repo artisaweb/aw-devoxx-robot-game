@@ -194,8 +194,6 @@ export class CinematicHallway extends THREE.Group {
   private readonly openDoorSlots: HallwayOpenDoorSlot[];
   private readonly clearZones: { z: number; halfZ: number }[];
   private readonly furnitureClearZones: { z: number; halfZ: number }[];
-  /** Local x/z/uplight-color of every pillar that got a real light+fixture mesh — populated by buildPillars(), purely for the fixture's own emissive colour (visual only). */
-  private litPillarFixtures: { x: number; z: number; color: number }[] = [];
   /** Local x/z of every pillar, lit or not — populated by buildPillars(), read by pillarColliderPositions(). Every pillar gets the same collider regardless of whether it also got a light+fixture. */
   private allPillarXZ: { x: number; z: number }[] = [];
 
@@ -429,11 +427,9 @@ export class CinematicHallway extends THREE.Group {
     const step = Math.max(1, Math.round(1 / Math.max(lightDensity, 0.01)));
     const colors = this.palette.uplightColors;
     const fixtureGeo = new THREE.CylinderGeometry(0.4, 0.45, 0.3, 16);
-    const litPillars: { x: number; z: number; color: number }[] = [];
     positions.forEach((p) => {
       if (p.colorIndex % step !== 0) return;
       const color = colors[p.colorIndex % colors.length];
-      litPillars.push({ x: p.x, z: p.z, color });
 
       // A real, visible uplighter fixture at the pillar's base, fully in its
       // own assigned colour — not just a bare light source with nothing to
@@ -470,7 +466,6 @@ export class CinematicHallway extends THREE.Group {
       light.position.set(p.x + inward * (pillarRadiusAtLightHeight + 0.15), pillarHeight * lightHeightFraction, p.z);
       this.add(light);
     });
-    this.litPillarFixtures = litPillars;
   }
 
   // Real event-furniture.js models (src/props/) instead of plain instanced

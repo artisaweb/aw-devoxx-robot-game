@@ -2488,7 +2488,7 @@ function buildSideStair(group: THREE.Group, stair: SideStair): void {
 // here (not inside CinematicHallway.ts) since it's specific to this game's
 // own two-stair layout, same as Room 4's screen/stage — CinematicHallway
 // stays a generic, game-agnostic hallway shell.
-function buildStairsAndScreen(group: THREE.Group, y: number): void {
+function buildStairsAndScreen(group: THREE.Group): void {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1f1d24, roughness: 1 });
   const stepMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9 });
 
@@ -3006,7 +3006,6 @@ export function createFirstFloor(): THREE.Group {
   clearDevoxxLetters('first'); // see createExhibitionHall's own reset
   clearChargingDocks('first');
   clearContactProps('first');
-  const hallWallHeight = 6; // end-caps only — CinematicHallway's own side walls use HALLWAY_CEILING_HEIGHT-derived scale
 
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x2e2b33 });
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1f1d24 });
@@ -3207,7 +3206,7 @@ export function createFirstFloor(): THREE.Group {
   // closed-glass-door exit lobby, not a closed door prop — see
   // buildStairsAndScreen's own comment for why (the user: "at the end of the
   // hall... there should be stairs going down to the exit outside").
-  buildStairsAndScreen(group, y);
+  buildStairsAndScreen(group);
 
   // Room 4 — the one real, big, walkable auditorium (see the first-floor
   // layout note above HALLWAY_CORRIDOR_HALF_WIDTH). Entrance faces the hall, on Room 4's right/east side.
