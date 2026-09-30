@@ -17,10 +17,16 @@ export class InputManager {
   constructor() {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+    window.addEventListener('blur', this.onBlur);
   }
 
   private onKeyDown = (e: KeyboardEvent) => this.down.add(e.code);
   private onKeyUp = (e: KeyboardEvent) => this.down.delete(e.code);
+  // A key held while the page loses focus (Cmd/Alt-Tab, clicking the address
+  // bar) has its keyup delivered somewhere else, so without this it stays
+  // "down" forever and the robot keeps driving on its own. Same reason
+  // TouchControls drops its virtual keys on blur.
+  private onBlur = () => this.down.clear();
 
   isDown(code: string): boolean {
     return this.down.has(code) || this.virtualDown.has(code);
@@ -65,5 +71,6 @@ export class InputManager {
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('blur', this.onBlur);
   }
 }
