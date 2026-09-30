@@ -321,7 +321,7 @@ export class SwagRun {
   }
 
   /** Advances the round — returns whether the robot was just splashed by a hazard, and whether a pickup was just collected (for the SFX layer, see Game.ts). */
-  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stunned: boolean; pickedUp: boolean; drankBeer?: boolean } {
+  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stunned: boolean; pickedUp: boolean; drankBeer?: boolean; rechargedFrom?: 'coffee' | 'candy' } {
     if (this.finished) return { stunned: false, pickedUp: false };
 
     this.timeRemaining = Math.max(0, this.timeRemaining - dt);
@@ -372,6 +372,11 @@ export class SwagRun {
       return { stunned: false, pickedUp };
     }
 
+    // Which kiosk topped the robot up this frame, for Game.ts to sound. The
+    // two are at opposite ends of the hall, so they can't both fire in one
+    // frame and one slot is enough.
+    let rechargedFrom: 'coffee' | 'candy' | undefined;
+
     this.coffeeMachine.update(dt);
     this.coffeeCooldown = Math.max(0, this.coffeeCooldown - dt);
     const coffeeAvailable = this.coffeeCooldown <= 0;
@@ -382,6 +387,7 @@ export class SwagRun {
       if (dx * dx + dz * dz < COFFEE_RADIUS * COFFEE_RADIUS) {
         robot.restoreEnergy(COFFEE_BOOST);
         this.coffeeCooldown = COFFEE_COOLDOWN;
+        rechargedFrom = 'coffee';
         // Fire-and-forget — the energy restore above is immediate, matching
         // the existing arcade-quick refuel feel; the brew animation (~10s)
         // is purely a visual flourish, not gated on gameplay.
@@ -400,6 +406,7 @@ export class SwagRun {
         robot.restoreEnergy(CANDY_ENERGY_BOOST);
         this.timeRemaining += CANDY_TIME_BONUS;
         this.candyCooldown = CANDY_COOLDOWN;
+        rechargedFrom = 'candy';
         if (!this.candyMachine.busy) void this.candyMachine.activate();
       }
     }
@@ -565,6 +572,6 @@ export class SwagRun {
       }
     }
 
-    return { stunned, pickedUp, drankBeer };
+    return { stunned, pickedUp, drankBeer, rechargedFrom };
   }
 }

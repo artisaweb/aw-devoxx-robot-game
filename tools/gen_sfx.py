@@ -354,6 +354,57 @@ def sfx_biggy_fall():
     return place(out, wobble, 0.38)
 
 
+def sfx_coffee_pour():
+    # Pump hum, then the shot itself. Same climbing-resonance trick as the beer
+    # pour, an octave up and much shorter — a cup, not a pint — then a ceramic
+    # tick as it's set down.
+    out = np.zeros(1)
+    n_h = int(0.35 * SR)
+    hum = np.sin(phase(np.full(n_h, 96.0))) * 0.6 + saw(np.full(n_h, 48.0)) * 0.3
+    out = place(out, lowpass(hum, 1200) * env_adsr(n_h, 0.04, 0.05, 0.85, 0.12) * 0.5, 0.0)
+    n_s = int(0.55 * SR)
+    f = glide(n_s, (0, 900), (1, 1800))
+    stream = resonator(lowpass(noise(n_s), 4000), f, 320) * 4.0
+    out = place(out, stream * glide(n_s, (0, 0), (0.08, 1), (0.8, 1), (1, 0)), 0.28)
+    out = place(out, metal_clank(0.18, base=1400) * 0.35, 0.86)
+    return out
+
+
+def sfx_candy_drop():
+    # Spiral coil turning, wrapper crinkle as the bar tips, thunk in the tray.
+    out = np.zeros(1)
+    n_m = int(0.42 * SR)
+    whirr = saw(glide(n_m, (0, 210), (0.2, 250), (1, 230)))
+    out = place(out, lowpass(whirr, 2200) * env_adsr(n_m, 0.03, 0.06, 0.8, 0.1) * 0.45, 0.0)
+    n_c = int(0.30 * SR)
+    crinkle = (rng.random(n_c) < 900 / SR) * rng.uniform(-1, 1, n_c)
+    crinkle = highpass(resonator(crinkle, 4200, 2500), 2000) * 5.0
+    out = place(out, crinkle * exp_decay(n_c, 0.12), 0.34)
+    out = place(out, thud(0.30, 240, 90, 0.7) * 0.9 + metal_clank(0.30, base=680) * 0.25, 0.52)
+    return out
+
+
+def sfx_charge_up():
+    # The charging pad. Unlike the two kiosks this is a *sustained* action — you
+    # stand on it and energy accrues — so the sound has to read as "charging
+    # started and completed" rather than as a single grab: a power hum climbing
+    # an octave and a half with electrical shimmer over it, resolving into a
+    # confirmation chime.
+    dur = 1.0
+    n = int(dur * SR)
+    f = glide(n, (0, 110), (0.75, 300), (1, 330))
+    core = saw(f) * 0.5 + saw(f * 1.005) * 0.5  # detuned pair = a beating hum
+    core = lowpass(core, glide(n, (0, 900), (1, 4200)))
+    # Shimmer sits well under the hum and in a narrow band: mixed any louder it
+    # swamps the climb entirely and the whole thing reads as hiss, not power.
+    shimmer = resonator(crackle(dur, 140, tone=5200), glide(n, (0, 2500), (1, 6000)), 400) * 1.5
+    out = (core * 2.4 + shimmer * 0.16) * glide(n, (0, 0), (0.06, 1), (0.8, 1), (1, 0))
+    n_c = int(0.45 * SR)
+    chime = sum(np.sin(2 * np.pi * fr * t_axis(0.45)) / (i + 1)
+                for i, fr in enumerate([1568.0, 2093.0, 3136.0]))
+    return place(out, chime * exp_decay(n_c, 0.13) * 0.8, 0.82)
+
+
 def sfx_beer_pour():
     # Tap handle, pour, foam settling. Every robot gets this one; Biggy gets
     # the burp below on top of it.
@@ -405,6 +456,9 @@ SOUNDS = {
     "biggy-fall": sfx_biggy_fall,
     "beer-pour": sfx_beer_pour,
     "biggy-burp": sfx_biggy_burp,
+    "coffee-pour": sfx_coffee_pour,
+    "candy-drop": sfx_candy_drop,
+    "charge-up": sfx_charge_up,
 }
 
 

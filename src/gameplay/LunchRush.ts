@@ -708,7 +708,7 @@ export class LunchRush {
   }
 
   /** Advances the endless round. Returns whether Biggy stumbled (recoverable) or fell (permanent, see Robot.fallOver), plus an optional growth-milestone toast. */
-  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean; drankBeer?: boolean } {
+  update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stumbled: boolean; fell: boolean; growthToast?: string; pickedUp: boolean; drankBeer?: boolean; rechargedFrom?: 'coffee' | 'candy' } {
     if (this.finished) return { stumbled: false, fell: false, pickedUp: false };
 
     this.survivedTime += dt;
@@ -830,6 +830,10 @@ export class LunchRush {
       }
     }
 
+    // See SwagRun.ts's identical declaration — same two kiosks, same reason one
+    // slot is enough.
+    let rechargedFrom: 'coffee' | 'candy' | undefined;
+
     this.javaMachine.update(dt);
     this.javaCooldown = Math.max(0, this.javaCooldown - dt);
     const javaAvailable = this.javaCooldown <= 0;
@@ -840,6 +844,7 @@ export class LunchRush {
       if (dx * dx + dz * dz < COFFEE_RADIUS * COFFEE_RADIUS) {
         robot.restoreEnergy(COFFEE_BOOST);
         this.javaCooldown = COFFEE_COOLDOWN;
+        rechargedFrom = 'coffee';
         // Fire-and-forget — see SwagRun.ts's identical coffee-machine comment.
         if (!this.javaMachine.busy) void this.javaMachine.activate();
       }
@@ -855,6 +860,7 @@ export class LunchRush {
       if (dx * dx + dz * dz < CANDY_RADIUS * CANDY_RADIUS) {
         robot.restoreEnergy(CANDY_ENERGY_BOOST);
         this.candyCooldown = CANDY_COOLDOWN;
+        rechargedFrom = 'candy';
         if (!this.candyMachine.busy) void this.candyMachine.activate();
       }
     }
@@ -1184,6 +1190,6 @@ export class LunchRush {
       return false;
     });
 
-    return { stumbled, fell, growthToast, pickedUp, drankBeer };
+    return { stumbled, fell, growthToast, pickedUp, drankBeer, rechargedFrom };
   }
 }
