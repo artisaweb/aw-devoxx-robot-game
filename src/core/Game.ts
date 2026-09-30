@@ -324,7 +324,9 @@ export class Game {
     if (this.level === 2) {
       this.robot.topple(TOPPLE_DURATION, TOPPLE_RISE_DURATION);
       this.robot.setInvincible(TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE);
-      setTimeout(() => playSfx('droid-getup'), TOPPLE_DURATION * 1000);
+      setTimeout(() => {
+        if (this.level === 2) playSfx('droid-getup');
+      }, TOPPLE_DURATION * 1000);
     } else if (this.level === 3) {
       // Routed through LunchRush rather than stunning directly: level 3 ends on
       // three hits close together once Biggy is big enough, and that ledger
@@ -618,7 +620,13 @@ export class Game {
           // because KnowledgeRun.ts's own stunCooldown already blocks a
           // re-trigger for the whole down+rise+grace window, so this timer
           // can't fire early against a topple that got restarted mid-flight.
-          setTimeout(() => playSfx('droid-getup'), TOPPLE_DURATION * 1000);
+          // The level check (here, in zapInPuddle and on Biggy's burp) is for
+          // a round that ends inside the delay: time running out mid-topple
+          // and a quick keypress would otherwise play Droid getting up over
+          // Biggy's briefing.
+          setTimeout(() => {
+            if (this.level === 2) playSfx('droid-getup');
+          }, TOPPLE_DURATION * 1000);
         }
         // Order matters: showQuoteToast() replaces rather than queues, and a
         // same-frame nugget-pickup-plus-hit should surface the topple line,
@@ -648,7 +656,9 @@ export class Game {
           // and has no completion callback, and the tap's own cooldown is far
           // longer than this delay, so two pours can't overlap into a
           // double-burp.
-          setTimeout(() => playSfx('biggy-burp'), BEER_POUR_DURATION * 1000);
+          setTimeout(() => {
+            if (this.level === 3) playSfx('biggy-burp');
+          }, BEER_POUR_DURATION * 1000);
         }
         if (rechargedFrom) playSfx(rechargedFrom === 'coffee' ? 'coffee-pour' : 'candy-drop');
         if (growthToast) this.hud.showQuoteToast(growthToast);
