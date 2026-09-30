@@ -406,7 +406,7 @@ export class Robot {
    * reasoning that a stand-in flash was worse than a brief mismatch — but with
    * every robot having a stand-in of its own, the mismatch is the worse of the
    * two: Level 2 opened with Voxxy playing Droid, and Level 3 with Droid
-   * playing Biggy, for however long 10-34 MB per clip takes to arrive. If the
+   * playing Biggy, for however long a 10-23 MB base model takes to arrive. If the
    * real model never arrives at all, the stand-in is simply what you play as.
    */
   private loadRobotModel(robotId: string): void {
