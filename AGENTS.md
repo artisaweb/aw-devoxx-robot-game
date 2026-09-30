@@ -56,7 +56,7 @@ Dialogue, HUD copy, knowledge quotes, robot toasts, and signage each have their 
 
 ### Procedural props vs. GLTF models
 
-`src/props/*.js` (+ hand-written `.d.ts` companions) are procedurally-generated Three.js geometry (beer tap, vending/candy machines, event furniture, sandwiches, the DEVOXX letters) — no external model files. `public/models/*.glb` are the three robots' real rigged models/animation clips (AI-generated, loaded via `voxxyModel.ts`'s `loadRobotAsset`). A `Sprite` added to `groundFloorGroup` or `sponsorBoothsGroup` must set `raycast = () => {}` — `FollowCamera`'s occlusion raycast against those groups otherwise hits the sprite and blacks out the screen.
+`src/props/*.js` (+ hand-written `.d.ts` companions) are procedurally-generated Three.js geometry (beer tap, vending/candy machines, event furniture, sandwiches, the DEVOXX letters, the charging dock, and the four walk-into contact props: rubber duck, recycling bins, talk-rating kiosk, wet-floor sign) — no external model files. `public/models/*.glb` are the three robots' real rigged models/animation clips (AI-generated, loaded via `voxxyModel.ts`'s `loadRobotAsset`). A `Sprite` added to `groundFloorGroup` or `sponsorBoothsGroup` must set `raycast = () => {}` — `FollowCamera`'s occlusion raycast against those groups otherwise hits the sprite and blacks out the screen.
 
 ### `private/` is local-only, not part of the repo
 
