@@ -657,11 +657,6 @@ export class Robot {
     return this.stunTimer > 0;
   }
 
-  /** True while airborne (mid-jump) — used to let a well-timed jump clear the foyer ledge. */
-  get isGrounded(): boolean {
-    return this.grounded;
-  }
-
   /** Fraction in [0, 1], for a HUD energy bar. */
   get energyFraction(): number {
     return this.energy / ENERGY_MAX;
