@@ -9,3 +9,7 @@ tsconfig.tsbuildinfo
 private/
 # local tooling worktrees, never part of the repo
 .claude/worktrees/
+
+# Playwright smoke-test output
+test-results/
+playwright-report/

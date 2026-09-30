@@ -19,9 +19,10 @@ npm install
 npm run dev       # Vite dev server
 npm run build     # tsc -b (typecheck) && vite build — this IS the type check; there's no separate lint/typecheck script
 npm run preview   # serve the production build locally
+npm run test:smoke  # Playwright: build + preview, then every level on desktop and phone
 ```
 
-No test suite and no lint config exist in this repo — `npm run build` (via `tsc -b`, `strict: true`) is the only automated correctness check.
+No unit tests and no lint config exist in this repo. `npm run build` (via `tsc -b`, `strict: true`) is the type check; `npm run test:smoke` (`tests/smoke.spec.ts`) loads each level on a desktop and a phone viewport and fails on a stand-in model, a missing clip, a level that won't start or move, or any page error, console error or missing file. `@playwright/test` is pinned to 1.58.2 because each version drives one specific Chromium build.
 
 `tools/gen_sfx.py` regenerates `public/audio/*.wav` procedurally (oscillators/noise, no samples) — run with `python3 tools/gen_sfx.py` (needs only `numpy`) if a sound needs tuning.
 
