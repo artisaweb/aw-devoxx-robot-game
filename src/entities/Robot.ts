@@ -283,7 +283,8 @@ export class Robot {
   // applyBodyScale()'s squash-pop overshoot and update()'s decay tick.
   private growPulseTimer = 0;
   private baseBodyScale = 1;
-  // False until voxxy.glb's async load resolves — addAccessory uses this to
+  // False while a stand-in is showing, true once the current robot's .glb has
+  // loaded — addAccessory uses this to
   // pick the anchor table actually tuned for whichever body is on screen
   // (see swagAccessories.ts's VOXXY_SPOTS vs VOXXY_REAL_MODEL_SPOTS note).
   private usingRealModel = false;
@@ -292,8 +293,9 @@ export class Robot {
   // initial load, before setRobotModel() is ever called.
   private currentRobotId = 'voxxy';
   // True from the moment a loadRobotModel() call starts until *its own*
-  // load settles (success or failure) — see isLoadingModel's own comment for
-  // why the guard checks currentRobotId rather than trusting every call.
+  // load settles (success or failure). The .then()/.catch() only clear it
+  // when currentRobotId still names their robot: a load that a newer
+  // setRobotModel() superseded must not clear the newer load's flag.
   private loadingModel = false;
   private currentSpeed = 0;
   private fallen = false;
@@ -495,10 +497,10 @@ export class Robot {
   }
 
   /**
-   * True while a setRobotModel() switch is in flight — Game.ts polls this
-   * each frame to show/hide a "Loading <robot>..." HUD cue instead of
-   * silently letting the previous robot's model keep standing in with no
-   * indication anything is happening.
+   * True while a robot's real model is still downloading — Game.ts polls
+   * this each frame to show/hide a "Loading <robot>..." HUD cue, so the
+   * low-poly stand-in on screen meanwhile reads as a placeholder rather
+   * than as the finished robot.
    */
   get isLoadingModel(): boolean {
     return this.loadingModel;
