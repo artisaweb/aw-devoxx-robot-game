@@ -47,6 +47,34 @@ their nose, and they'll break off and come after you.
 
 > The Level 3 shot above is the opening moment, before the buffet stocks and the queue forms.
 
+### Scoring
+
+- **Levels 1 and 2:** a point for every piece of swag or quote. Each one also puts 3 seconds back
+  on the clock, and the candy kiosk is worth 5. The rounds start short (20 s and 32 s) on
+  purpose, so the clock is something you keep feeding, not something you wait out.
+- **Clear a level early** and the seconds you have left are multiplied by what you collected and
+  added as a bonus. Swag knocked out of your hands never comes back, so a late collision still
+  costs you.
+- **Level 3:** a point per sandwich, five for the rare crab sandwich, which is also the one that
+  makes Biggy grow the most.
+- The **day total** is the three levels added together, and your personal best is kept in the
+  browser.
+
+### Things in the building
+
+The venue isn't scenery; most of what's standing around reacts when a robot walks into it.
+
+- The big **DEVOXX letters** topple when you run into them.
+- A **wet-floor sign** marks a puddle on each floor, and walking through it zaps whoever does:
+  Voxxy is stunned, Droid goes over, and for Biggy it counts as a hit, so a grown Biggy can lose
+  the run to it.
+- The **coffee machine** and **candy kiosk** give energy (the candy also gives time), **charging
+  pads** upstairs refill it while you stand on them, and the **beer tap** makes you tipsy.
+- A **rubber duck** squeaks, the **recycling station** sorts whatever you bump into it, and the
+  **talk-rating kiosk** upstairs takes your vote.
+- Room 4's stage screen shows **live coding** being typed while you play, under the DEVOXX
+  branding.
+
 ### Robots that have started acting human
 
 Nothing any of the three robots does is a robot job. They are at a conference behaving exactly
@@ -59,8 +87,8 @@ themselves.
 
 They **eat and drink.** Voxxy queues at the coffee machine and the candy kiosk to keep going.
 Biggy works a lunch buffet, and every sandwich he eats makes him permanently rounder, slower and
-easier to knock over — the hazard is the queue he keeps cutting into. All three will pull a beer
-from the sponsor tap, and it makes them *tipsy*: the steering wanders, and a little mechanical bug
+easier to knock over — the hazard is the queue he keeps cutting into. Voxxy and Biggy will both pull a
+beer from the sponsor tap, and it makes them *tipsy*: the steering wanders, and a little mechanical bug
 starts orbiting their head.
 
 They **get tired.** Energy drains when they run and jump, and recharges from coffee, from candy,
@@ -123,7 +151,9 @@ for wherever you're standing.
 ## How it's built
 
 Vite + TypeScript + Three.js, client-only. No framework, no backend, no state that outlives the
-tab except a personal-best score in `localStorage`.
+tab except a personal-best score and two display preferences (touch controls and the folded
+minimap) in `localStorage`. The hosted build is static files on Cloudflare Workers. It runs in
+any current browser with WebGL 2.
 
 - **One robot, three levels.** A single `Robot` instance persists across the whole day; level
   transitions swap its GLTF model and rig rather than building a new one. Each level is its own
@@ -142,6 +172,9 @@ tab except a personal-best score in `localStorage`.
 - **Sound is synthesised, not sampled.** `tools/gen_sfx.py` generates every `.wav` in
   `public/audio/` from oscillators and noise — run it with `python3 tools/gen_sfx.py` (needs
   `numpy`) to retune a sound.
+- **Touch is the keyboard, pressed by a finger.** The on-screen stick and buttons hold down the
+  same keys the keyboard would, so every level, the start freeze and the end screens handle
+  touch and keyboard through one code path.
 - **Player-facing text lives apart from the code that shows it.** Dialogue, HUD copy, the
   knowledge quotes, robot toasts and venue signage each have their own file under `src/text/`.
 
@@ -154,8 +187,18 @@ never by logo or trademark — a wink for people who recognise them, not a repro
 
 ## Credits and licence
 
-Built with heavy use of generative AI, deliberately and throughout: the code is vibecoded, the
-robot models are AI-generated, and the sound effects are procedurally synthesised.
+Built with heavy use of generative AI, deliberately and throughout:
+
+- **Code:** written with Claude Code, including the venue geometry, all three gameplay engines,
+  the Blender rigging scripts and the sound synthesiser.
+- **Robot models:** generated from multi-angle reference images with an AI image-to-3D tool, then
+  rigged and animated in Blender entirely through generated Python (`bpy`) scripts and the
+  Blender MCP server. Each robot has its own walk, run, jump and stun clips, tuned to its own
+  weight.
+- **Props:** each started as a standalone AI-generated Three.js prototype page and was ported
+  into the game.
+- **Sound:** no AI audio model and no samples. Every effect is synthesised from oscillators and
+  noise by `tools/gen_sfx.py`.
 
 Source code is [MIT licensed](./LICENSE). The robot model assets in `public/models/` are
 AI-generated. The competition's own reference robot assets are deliberately **not** used anywhere
