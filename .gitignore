@@ -7,3 +7,5 @@ dist/
 tsconfig.tsbuildinfo
 
 private/
+# local tooling worktrees, never part of the repo
+.claude/worktrees/
