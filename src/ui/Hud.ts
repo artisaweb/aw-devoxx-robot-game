@@ -20,6 +20,8 @@ import {
   TOUCH_NEXT_PROMPT,
   TOUCH_NEW_DAY,
   touchToggleLabel,
+  MINIMAP_CHIP_LABEL,
+  MINIMAP_TAP_TO_HIDE,
 } from '../text/hudCopy';
 import {
   HALL_WIDTH,
@@ -43,6 +45,22 @@ import { isLocalHost } from '../util/env';
 const FIRST_FLOOR_MINIMAP_ZONES = [FIRST_FLOOR_HALL_ZONE, FIRST_FLOOR_ROOM4_ZONE];
 
 const MINIMAP_SIZE = 150;
+// Phone-sized screens (shorter side under this, either orientation): the
+// minimap starts folded away behind a MAP chip — a 150px map is a third of a
+// landscape phone's height — and opens smaller when tapped. Tablets and car
+// screens are above it and keep the full map.
+const MINIMAP_SMALL_SCREEN = 500;
+const MINIMAP_SMALL_SIZE = 104;
+const MINIMAP_STORAGE_KEY = 'devoxx-minimap';
+
+function readMinimapChoice(): 'shown' | 'hidden' | null {
+  try {
+    const stored = window.localStorage.getItem(MINIMAP_STORAGE_KEY);
+    return stored === 'shown' || stored === 'hidden' ? stored : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * The whole-session tally shown on "A Day at Devoxx"'s end screen — Biggy's
@@ -81,6 +99,9 @@ export class Hud {
   private lastMessageHtml = '';
   private minimapCanvas: HTMLCanvasElement;
   private minimapCtx: CanvasRenderingContext2D;
+  private minimapChip: HTMLButtonElement;
+  // The player's own show/hide choice on a small screen; null until they make one.
+  private minimapChoice = readMinimapChoice();
   private toastEl: HTMLDivElement;
   private toastHideTimer: ReturnType<typeof setTimeout> | null = null;
   // Shown while a level transition's setRobotModel() switch is still
@@ -224,19 +245,37 @@ export class Hud {
     const ctx = this.minimapCanvas.getContext('2d');
     if (!ctx) throw new Error('2D canvas context unavailable for minimap');
     this.minimapCtx = ctx;
+    this.minimapCanvas.title = MINIMAP_TAP_TO_HIDE;
+    this.minimapCanvas.addEventListener('click', () => this.setMinimapChoice('hidden'));
+
+    this.minimapChip = document.createElement('button');
+    this.minimapChip.type = 'button';
+    this.minimapChip.tabIndex = -1; // never focusable: Space would "click" it (see showIntro())
+    this.minimapChip.textContent = MINIMAP_CHIP_LABEL;
+    this.minimapChip.style.cssText = `
+      position: absolute; top: 56px; right: calc(16px + env(safe-area-inset-right));
+      font: 700 13px sans-serif; color: white; padding: 7px 12px; border-radius: 16px;
+      background: rgba(0,0,0,0.55); border: 2px solid rgba(255,255,255,0.4);
+      pointer-events: auto; cursor: pointer; touch-action: manipulation; display: none;
+    `;
+    this.minimapChip.addEventListener('mousedown', (e) => e.preventDefault());
+    this.minimapChip.addEventListener('click', () => this.setMinimapChoice('shown'));
 
     container.style.position = 'relative';
     container.appendChild(bar);
     container.appendChild(energyWrap);
     container.appendChild(this.hungerWrap);
     container.appendChild(this.minimapCanvas);
+    container.appendChild(this.minimapChip);
     container.appendChild(this.messageEl);
     container.appendChild(this.toastEl);
     container.appendChild(this.introEl);
     container.appendChild(this.modelLoadingEl);
     // A phone rotating, or a car screen resizing its browser pane, can cross
     // the compact threshold — re-render the briefing rather than just refit it.
+    this.applyMinimapLayout();
     window.addEventListener('resize', () => {
+      this.applyMinimapLayout();
       if (!this.introHidden) this.showIntro(this.introLevel);
       this.fitCentered(this.messageEl);
     });
@@ -467,6 +506,31 @@ export class Hud {
     const scale = h > 0 && w > 0 ? Math.min(1, availH / h, availW / w) : 1;
     el.style.top = `${reserveTop + availH / 2}px`;
     el.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+  }
+
+  private setMinimapChoice(choice: 'shown' | 'hidden'): void {
+    this.minimapChoice = choice;
+    try {
+      window.localStorage.setItem(MINIMAP_STORAGE_KEY, choice);
+    } catch {
+      // Blocked storage — the choice lasts this visit.
+    }
+    this.applyMinimapLayout();
+  }
+
+  /** Full-size, fixed minimap on a big screen; on a phone-sized one, folded or small and tap-to-fold. */
+  private applyMinimapLayout(): void {
+    const small = Math.min(this.container.clientWidth, this.container.clientHeight) < MINIMAP_SMALL_SCREEN;
+    const hidden = small && (this.minimapChoice ?? 'hidden') === 'hidden';
+    const size = small ? MINIMAP_SMALL_SIZE : MINIMAP_SIZE;
+    const map = this.minimapCanvas.style;
+    map.display = hidden ? 'none' : 'block';
+    map.width = map.height = `${size}px`;
+    map.top = small ? '56px' : '64px';
+    map.right = small ? 'calc(16px + env(safe-area-inset-right))' : '24px';
+    map.pointerEvents = small ? 'auto' : 'none';
+    map.cursor = small ? 'pointer' : '';
+    this.minimapChip.style.display = hidden ? 'block' : 'none';
   }
 
   /** Short screens (landscape phones, in-car displays) get the intro panel's compact type sizes. */

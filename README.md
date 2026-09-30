@@ -7,6 +7,8 @@ Kinepolis Antwerp.
 **Play it:** [devoxx-game.artisaweb.be](https://devoxx-game.artisaweb.be)
 
 No install, no backend, no account — it's a static page that runs entirely in your browser.
+It plays on a desktop or laptop **with a keyboard**, and on a phone, a tablet or a car's screen
+**by touch**, with on-screen controls (see [Controls](#controls)).
 
 ---
 
@@ -84,6 +86,8 @@ config, but `tsc` runs in `strict` mode, so a build failure is a real failure.
 
 ### Controls
 
+**With a keyboard:**
+
 | Key | Action |
 | --- | --- |
 | `W` `A` `S` `D` / arrow keys | Move |
@@ -98,7 +102,9 @@ timer doesn't start while you're still reading.
 BOOST and JUMP buttons sit under your right thumb; the day-end screen gets a NEW DAY button in
 place of `R`. They appear on their own on a device that reports a touch screen, or at the first
 touch on one that doesn't, and the briefing panel has a switch to turn them off or on (the choice
-is remembered). The keyboard keeps working either way.
+is remembered). The keyboard keeps working either way. On a phone-sized screen the minimap folds
+away behind a MAP chip in the corner so it doesn't cover the view — tap it to open a smaller
+map, tap the map to fold it again.
 
 ### Debug shortcuts
 
