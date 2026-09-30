@@ -71,7 +71,7 @@ export const LEVEL_INTROS: Record<1 | 2 | 3, { title: string; description: strin
   3: {
     title: 'Level 3 — Lunch Rush',
     description:
-      "Endless mode — keep Biggy's 🍽️ Hunger up by eating (it drains faster the longer you survive), but every bite makes him bigger, slower, and easier to knock down. Once he's big enough, it takes 3 hits close together to end the run — one bump alone is just a stumble. Shift still lets you outrun the crowd, as long as you've got ⚡ energy.",
+      "Endless mode — keep Biggy's 🍽️ Hunger up by eating (it drains faster the longer you survive), but every bite makes him bigger, slower, and easier to knock down. Once he's big enough, it takes 3 hits close together to end the run — one bump alone is just a stumble. Boosting still lets you outrun the crowd, as long as you've got ⚡ energy.",
     controls: 'WASD / Arrows — move&#10;Shift — boost (uses ⚡ energy)&#10;Space — jump onto a table to eat',
   },
 };
@@ -105,3 +105,25 @@ export function personalBestText(best: number): string {
   return `Personal Best: ${best} pts`;
 }
 export const PRESS_R_NEW_DAY = 'Press R to start a new day';
+
+// On-screen touch controls (see src/input/TouchControls.ts) — phones,
+// tablets, in-car screens, anything without a keyboard. When they're showing,
+// every line above that names a key has a tap-shaped twin here, picked by
+// Hud.ts's touch mode; the keyboard keeps working either way.
+export const TOUCH_INTRO_CONTROLS: Record<1 | 2 | 3, string> = {
+  1: 'Left stick — move&#10;BOOST — hold to boost (uses ⚡ energy)&#10;JUMP — jump (uses ⚡ energy)',
+  2: 'Left stick — move&#10;BOOST — hold to boost (uses ⚡ energy)&#10;JUMP — jump (uses ⚡ energy)',
+  3: 'Left stick — move&#10;BOOST — hold to boost (uses ⚡ energy)&#10;JUMP — jump onto a table to eat',
+};
+export const TOUCH_INTRO_START_HINT = 'Touch a control to start';
+export const TOUCH_NEXT_PROMPT: Record<1 | 2 | 3, string> = {
+  1: 'Touch any control for Level 2',
+  2: 'Touch any control for Level 3',
+  3: 'Tap NEW DAY to start a new day',
+};
+export const TOUCH_NEW_DAY = 'Tap NEW DAY to start a new day';
+export const TOUCH_BUTTON_LABELS = { jump: 'JUMP', boost: 'BOOST', newDay: 'NEW DAY' };
+/** The intro panel's show/hide switch for the touch controls. */
+export function touchToggleLabel(on: boolean): string {
+  return on ? '👆 Touch controls: ON' : '👆 Touch controls: OFF';
+}
