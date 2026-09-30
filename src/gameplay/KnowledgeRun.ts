@@ -222,10 +222,10 @@ const TIME_BONUS_PER_PICKUP = 3;
 // last pickup, so Droid regularly rises surrounded by several at once, not
 // one camper — 0.5s wasn't enough to move clear of a crowd already in range.
 export const POST_TOPPLE_GRACE = 1.0;
-// A couple of solid obstacles left in the corridor — AV carts and projector
-// stands, solid colliders hazards must route around too, same pattern as
-// the Tiny rope-maze. Simple box props, no
-// need for the sponsor-booth level of detail.
+// A couple of solid obstacles left in the corridor — AV carts, solid
+// colliders hazards must route around too, same pattern as the Tiny
+// rope-maze. Simple box props, no need for the sponsor-booth level of
+// detail.
 function createAvCart(): THREE.Object3D {
   const group = new THREE.Group();
   const body = new THREE.Mesh(
@@ -246,30 +246,6 @@ function createAvCart(): THREE.Object3D {
     wheel.position.set(dx, 0.08, dz);
     group.add(wheel);
   }
-  return group;
-}
-
-function createProjectorStand(): THREE.Object3D {
-  const group = new THREE.Group();
-  const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.06, 0.08, 1.1, 8),
-    new THREE.MeshStandardMaterial({ color: 0x3a3a3e, metalness: 0.4, roughness: 0.5 }),
-  );
-  pole.position.y = 0.55;
-  group.add(pole);
-  const head = new THREE.Mesh(
-    new THREE.BoxGeometry(0.4, 0.22, 0.3),
-    new THREE.MeshStandardMaterial({ color: 0x1c1c1f }),
-  );
-  head.position.y = 1.15;
-  group.add(head);
-  const lens = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.08, 0.08, 0.1, 12),
-    new THREE.MeshStandardMaterial({ color: 0x0a0a0a, emissive: 0x3d7aff, emissiveIntensity: 0.3 }),
-  );
-  lens.rotation.z = Math.PI / 2;
-  lens.position.set(0.22, 1.15, 0);
-  group.add(lens);
   return group;
 }
 
@@ -406,7 +382,7 @@ export class KnowledgeRun {
 
     for (const def of OBSTACLE_DEFS) {
       const groundY = getFirstFloorHeightAt(def.pos[0], def.pos[1]);
-      const mesh = def.radius > 0.6 ? createAvCart() : createProjectorStand();
+      const mesh = createAvCart();
       mesh.position.set(def.pos[0], groundY, def.pos[1]);
       this.group.add(mesh);
     }
