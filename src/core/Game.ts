@@ -137,7 +137,7 @@ export class Game {
     ...OBSTACLE_DEFS.map((def) => ({ x: def.pos[0], z: def.pos[1], radius: def.radius })),
     ...getAuditoriumRowWallColliders(),
     ...getHallwayPropColliders(),
-    // Both first-floor sets (corridor + Room 4's stage apron). Deliberately
+    // The first floor's one set, up on Room 4's stage deck. Deliberately
     // not `robotOnly`: unlike the row walls, these are solid objects the
     // attendees should route around too, so they stay in
     // firstFloorHazardColliders below.
@@ -305,7 +305,6 @@ export class Game {
     this.renderer.setAnimationLoop(() => this.tick());
   }
 
-  /** Level 1 finished → tear it down, load Level 2 (Droid, first floor) in its place. */
   /**
    * A robot standing in the wet floor's puddle gets the same reaction that
    * level's own attendee collision gives it — Voxxy short-circuits, Droid
@@ -350,6 +349,7 @@ export class Game {
     }
   }
 
+  /** Level 1 finished → tear it down, load Level 2 (Droid, first floor) in its place. */
   private advanceToLevel2(): void {
     this.dayScore.voxxy = this.swagRun!.score; // capture before teardown — see dayScore's own comment
     this.scene.remove(this.swagRun!.group);
