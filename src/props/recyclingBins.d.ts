@@ -4,6 +4,9 @@ import type * as THREE from 'three';
 
 export type RecyclingBinType = 'pmd' | 'paper' | 'rest';
 
+/** Every bin type, in the order the station lays them out left to right. */
+export const BIN_TYPES: readonly RecyclingBinType[];
+
 export interface RecyclingStation {
   readonly object: THREE.Object3D;
   /** Drops something in through that bin's flap. Resolves false if the bin is full or already running. */
