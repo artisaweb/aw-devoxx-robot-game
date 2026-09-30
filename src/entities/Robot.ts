@@ -1060,6 +1060,12 @@ export class Robot {
       }
       this.wasJumpDown = jumpDown;
     }
+    // Tracked through every branch above, not only the in-control one: a
+    // Space held when a stun or topple hit and released during it left this
+    // stale at true, so the first fresh press after recovering was
+    // swallowed. Holding Space through the whole stun still doesn't
+    // auto-jump on recovery.
+    this.wasJumpDown = input.isDown('Space');
 
     this.updateBoostVfx(dt, boosting);
 
