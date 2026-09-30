@@ -18,10 +18,10 @@ import { KNOWLEDGE_QUOTES, KnowledgeQuoteId } from '../text/knowledgeQuotes';
 // Level 2 — Droid, "Knowledge Run". Same
 // engine/shape as Voxxy's Swag Run (timer, pickups, wandering hazards, a
 // refuel kiosk, early finish + time bonus), reskinned for the first-floor
-// corridor/Room 4/Stair C lobby map instead of the ground-floor hall. Droid's
-// own 3D model doesn't exist yet — Game.ts reuses the Voxxy mesh as a
-// placeholder — nothing here depends on
-// which mesh the robot is wearing.
+// corridor/Room 4/Stair C lobby map instead of the ground-floor hall.
+// Nothing here depends on which mesh the robot is wearing (Droid's real
+// model, or his low-poly stand-in while it downloads — see Robot.ts's
+// loadRobotModel).
 
 // Which "conference wisdom" quote (see src/text/knowledgeQuotes.ts — that's
 // where to add/edit/translate the actual joke text) sits at each nugget
@@ -183,7 +183,7 @@ const ROOM_WAYPOINTS: { x: number; z: number }[] = [
   { x: FIRST_FLOOR_CENTER_X, z: -46 }, // the hall itself, roughly its midpoint
 ];
 const ROOM_VISIT_CHANCE = 0.4; // odds a new wander leg becomes a room visit instead of a random-heading leg
-const ROOM_VISIT_ARRIVAL_RADIUS = 2.5; // close enough to the room's center to call the visit over
+const ROOM_VISIT_ARRIVAL_RADIUS = 2.5; // close enough to the visit's waypoint (or lure spot) to call it over
 const ROOM_VISIT_MAX_DURATION = 12; // give up and resume normal wander if a doorway proves hard to line up with
 // A pickup-triggered lure leg (see the nugget pickup loop in update() below)
 // is meant to read as "drawn to the commotion for a moment," not a full
@@ -207,20 +207,22 @@ const HIT_REACTION_DURATION = 2.0;
 // identical constant and speechBubble.ts's hasMessage()/visible split.
 const SPEECH_VISIBLE_RANGE = 6;
 // Droid's topple: a two-phase failure, not Voxxy's single flat stun. Down is
-// full control loss; rise lets him turn but not move. Total ~3.2s vs.
-// Voxxy's ~2.2s (STUN_DURATION + POST_STUN_GRACE in SwagRun.ts) — the point
+// full control loss; rise lets him turn but not move. Down + rise is ~3.2s
+// of lost control vs. Voxxy's 1.2s stun (STUN_DURATION in SwagRun.ts), with
+// the same 1.0s grace after each (so a ~4.2s window vs. ~2.2s) — the point
 // is a longer, distinctly slower recovery for the tall/deliberate robot.
 export const TOPPLE_DURATION = 2.0;
 export const TOPPLE_RISE_DURATION = 1.2;
-const ROUND_DURATION = 32; // more ground to cover now (a ~58m hall plus four big auditoriums) and more nuggets to find
+const ROUND_DURATION = 32; // more ground to cover now (a ~180m hall plus Room 4's raked auditorium) and more nuggets to find
 const TIME_BONUS_PER_PICKUP = 3;
 // Was 0.5s (shorter than Voxxy's POST_STUN_GRACE 1.0s) on the theory that a
 // camping hazard needs less extra cooldown since the topple's own down/rise
 // window is already generous — that reasoning assumed a single hazard,
-// though. Bumped to match Voxxy/Biggy after real playtesting: Level 2 now
-// has 10 hazards (up from 6) and hazards actively converge on the player's
-// last pickup, so Droid regularly rises surrounded by several at once, not
-// one camper — 0.5s wasn't enough to move clear of a crowd already in range.
+// though. Bumped to match Voxxy/Biggy after real playtesting: Level 2 had
+// 10 hazards at the time (up from 6; seven since 2026-09-29, see
+// HAZARD_START) and hazards actively converge on the player's last pickup,
+// so Droid regularly rises surrounded by several at once, not one camper —
+// 0.5s wasn't enough to move clear of a crowd already in range.
 export const POST_TOPPLE_GRACE = 1.0;
 // A couple of solid obstacles left in the corridor — AV carts, solid
 // colliders hazards must route around too, same pattern as the Tiny
@@ -362,7 +364,7 @@ export class KnowledgeRun {
   private nuggets: Nugget[] = [];
   private hazards: Hazard[] = [];
   // See SwagRun.ts's identical field for why this doesn't start at 0 — set to
-  // Droid's own full topple cycle (down + rise + grace, ~3.7s), not a shorter
+  // Droid's own full topple cycle (down + rise + grace, ~4.2s), not a shorter
   // flat number, since a spawn-time hit costs exactly as much recovery time
   // as a mid-round one does.
   private stunCooldown = TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE;
@@ -538,7 +540,7 @@ export class KnowledgeRun {
         const maxDelta = HAZARD_CHASE_TURN_RATE * dt;
         h.heading += THREE.MathUtils.clamp(diff, -maxDelta, maxDelta);
       } else if (h.roamTarget) {
-        // Steer straight at the room's center, chase-style, rather than a
+        // Steer straight at the roam target, chase-style, rather than a
         // fixed heading — a fixed heading would overshoot as it approaches
         // and never actually thread the doorway.
         h.roamElapsed += dt;
@@ -624,7 +626,7 @@ export class KnowledgeRun {
       // NPC-vs-NPC separation: same push-out-along-the-normal technique as
       // the collider loop just above, but against every *other* hazard in
       // this same array instead of a fixed prop. O(n²) is fine at this
-      // array's size (ten hazards → 90 pair checks/frame). Deliberately
+      // array's size (seven hazards → 42 pair checks/frame). Deliberately
       // doesn't touch heading/wallEscapeTimer the way a real wall bounce
       // does — this only needs to keep two hazards from visually stacking,
       // not resolve a dense cluster in one frame like a rigid-body solver
