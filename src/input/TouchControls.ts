@@ -59,6 +59,7 @@ export class TouchControls {
   private stickBase = document.createElement('div');
   private stickKnob = document.createElement('div');
   private newDayButton: HTMLButtonElement;
+  private newDayReset: () => void;
   private jumpButton: HTMLButtonElement;
   private boostButton: HTMLButtonElement;
   private enabled: boolean;
@@ -97,6 +98,7 @@ export class TouchControls {
     // own button that only exists while that screen is up, rather than R on
     // one of the pads.
     this.newDayButton = this.buildHoldButton(TOUCH_BUTTON_LABELS.newDay, 'KeyR', 0, '50%', 'calc(10px + env(safe-area-inset-bottom))', '52,152,219');
+    this.newDayReset = this.buttonResets[this.buttonResets.length - 1];
     this.newDayButton.style.display = 'none';
     this.root.appendChild(this.newDayButton);
 
@@ -124,7 +126,16 @@ export class TouchControls {
   /** Shows NEW DAY only while Level 3's day-end screen is up (see Game.tick()). */
   setNewDayVisible(visible: boolean): void {
     const display = visible && this.enabled ? 'flex' : 'none';
-    if (this.newDayButton.style.display !== display) this.newDayButton.style.display = display;
+    if (this.newDayButton.style.display === display) return;
+    this.newDayButton.style.display = display;
+    // Hidden under a finger still pressing it (it hides the frame the day
+    // restarts), the button may never see its pointerup. A KeyR left held
+    // would then make the next day-end screen ignore every press of R —
+    // touch or keyboard — since that screen only accepts a fresh press.
+    if (display === 'none') {
+      this.input.releaseVirtual('KeyR');
+      this.newDayReset();
+    }
   }
 
   private setEnabled(on: boolean): void {
