@@ -105,14 +105,15 @@ npm install
 npm run dev       # Vite dev server
 npm run build     # tsc -b (typecheck) && vite build
 npm run preview   # serve the production build
-npm run test:smoke  # Playwright smoke test: every level, desktop and phone
+npm run test:smoke  # Playwright tests: every level and a full day, desktop and phone
 ```
 
 `npm run build` is also the type check — `tsc` runs in `strict` mode, so a build failure is a
 real failure. `npm run test:smoke` builds and serves the production build, then loads each level on
 a desktop and a phone-sized touch screen: the right robot with all its animations, a level that
-starts and moves, and no errors or missing files along the way. There are no unit tests and no lint
-config.
+starts and moves, and no errors or missing files along the way. It also plays a full day through
+the real level transitions to the day-end screen and a new day, and checks pickups, jumping and the
+phone-only behaviour. There are no unit tests and no lint config.
 
 ### Controls
 
