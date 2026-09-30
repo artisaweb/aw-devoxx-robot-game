@@ -212,7 +212,6 @@ export class Hud {
       button.blur();
       this.onTouchToggle?.();
     });
-    this.showIntro(1);
 
     this.toastEl = document.createElement('div');
     this.toastEl.style.cssText = `
@@ -271,6 +270,10 @@ export class Hud {
     container.appendChild(this.toastEl);
     container.appendChild(this.introEl);
     container.appendChild(this.modelLoadingEl);
+    // Only once introEl is in the DOM: fitCentered() measures the panel, and a
+    // detached element measures 0×0, which left Level 1's briefing unscaled on
+    // a short screen until the first resize.
+    this.showIntro(1);
     // A phone rotating, or a car screen resizing its browser pane, can cross
     // the compact threshold — re-render the briefing rather than just refit it.
     this.applyMinimapLayout();
