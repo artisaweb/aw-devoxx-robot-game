@@ -19,6 +19,8 @@ import {
   getChargingDockColliders,
   getChargingDockMarkers,
   updateChargingDocks,
+  getContactPropColliders,
+  updateContactProps,
   FIRST_FLOOR_SPAWN,
   FLOOR_HEIGHT,
   Collider,
@@ -115,6 +117,9 @@ export class Game {
     // The entrance-end charging dock's column (its pad is walk-on, see
     // getChargingDockColliders).
     ...getChargingDockColliders('ground'),
+    // The walk-into-me props that are actually solid — see
+    // getContactPropColliders for why not all of them are.
+    ...getContactPropColliders('ground'),
     { x: COFFEE_MACHINE_POS[0], z: COFFEE_MACHINE_POS[1], radius: KIOSK_COLLIDER_RADIUS },
     { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], radius: KIOSK_COLLIDER_RADIUS },
   ];
@@ -137,6 +142,7 @@ export class Game {
     // firstFloorHazardColliders below.
     ...getDevoxxLetterColliders('first'),
     ...getChargingDockColliders('first'),
+    ...getContactPropColliders('first'),
     // The balustrades around both mid-corridor stairwells. These are the only
     // thing keeping anyone out of a 3m trench in the corridor floor now that
     // the flights drop into the hall itself rather than through its side walls
@@ -520,6 +526,17 @@ export class Game {
       // the pads exist on both floors.
       if (charge > 0 && !this.wasCharging) playSfx('charge-up');
       this.wasCharging = charge > 0;
+      // The walk-into-me props. Only the robot is passed as a mover, which is
+      // what keeps the attendees out of it — they have no business squeaking a
+      // duck, and (see the wet floor) they don't run on electricity.
+      for (const kind of updateContactProps(dt, this.robot.mapMode, {
+        x: this.robot.position.x,
+        y: this.robot.position.y,
+        z: this.robot.position.z,
+        sizeScale: this.robot.sizeScale,
+      })) {
+        if (kind === 'duck') playSfx('duck-squeak');
+      }
 
       if (this.level === 1) {
         const { stunned, pickedUp, drankBeer, rechargedFrom } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CinematicHallway } from './CinematicHallway';
 import { createDevoxxLetters, DevoxxLetters } from '../props/devoxxLetters';
 import { createRobotChargingDock, RobotChargingDock } from '../props/robotChargingDock';
+import { createRubberDuck } from '../props/rubberDuck';
 import { EVENT_SIGNAGE, SPONSOR_SIGNAGE } from '../text/signage';
 
 // Rough blockout proportions from the real venue's floor plan
@@ -1109,6 +1110,7 @@ export function createExhibitionHall(): THREE.Group {
   // scene, same reason hallwayInstance is reassigned rather than collected.
   clearDevoxxLetters('ground');
   clearChargingDocks('ground');
+  clearContactProps('ground');
 
   // Colors from the real venue: the exhibition floor reads bright and open
   // (white walls/columns, mid-gray carpet) under a tall black ceiling void —
@@ -1189,6 +1191,11 @@ export function createExhibitionHall(): THREE.Group {
   // that column's own push-out, which left the dock unreachable and half-buried
   // in it.
   addChargingDock(hall, 'ground', { x: 40, y: 0, z: 25, rotationY: Math.PI * 1.25 });
+
+  // A debugging duck in the hall's far-left corner (the user: "optionally also
+  // add somewhere in an empty corner in the ExhibitionHall"). 6.3m clear of
+  // the column at (-35, -20), which is the nearest thing to it.
+  addRubberDuck(hall, 'ground', { x: -40, y: 0, z: -25, rotationY: 2.4 });
 
   return hall;
 }
@@ -1501,6 +1508,181 @@ export function updateChargingDocks(
     if (!dock.prop.busy) void dock.prop.activate();
   }
   return energy;
+}
+
+// --- Contact props --------------------------------------------------------
+//
+// The props you set off by walking into them rather than by pressing anything:
+// a rubber duck that squeaks, a recycling station whose flap takes a deposit,
+// a talk-rating kiosk that records a vote, and a wet-floor sign whose puddle
+// electrocutes whoever steps in it. One registry rather than four parallel
+// copies of the charging-dock machinery above: they differ only in what
+// activate() does, whether they block, and how long before they can fire
+// again — the per-frame tick, the mover-derived reach, the per-floor lists and
+// the reset are identical.
+//
+// Reach follows the same rule as everything else here: the prop's own
+// footprint plus MOVER_CLEARANCE * sizeScale, never a fixed number, so a prop
+// keeps triggering for Biggy at 2.6x instead of silently going dead once his
+// own push-out distance exceeds it.
+export type ContactPropKind = 'duck' | 'bins' | 'rating' | 'wet-floor';
+
+/** The shared slice of every prop module's returned object that this file uses. */
+interface ContactPropHandle {
+  readonly object: THREE.Object3D;
+  readonly busy: boolean;
+  update(dt: number): void;
+}
+
+interface PlacedContactProp {
+  kind: ContactPropKind;
+  floor: Floor;
+  x: number;
+  z: number;
+  /** The surface it stands on — a mover on the other floor can't reach it. */
+  baseY: number;
+  prop: ContactPropHandle;
+  /** The prop's own footprint. Clearance is added per-mover at test time. */
+  footprint: number;
+  /** Seconds before this prop may fire again, counted from the last firing. */
+  refractory: number;
+  timer: number;
+  /**
+   * Runs the prop's own animation. Fire-and-forget, like the dock's. Gets the
+   * mover because the wet floor needs its height — the bolts have to reach up
+   * the robot that stepped in the puddle, not stop at a fixed knee height.
+   */
+  fire: (mover: { x: number; y: number; z: number; sizeScale: number }) => void;
+}
+
+const placedContactProps: PlacedContactProp[] = [];
+const groundContactPropColliders: Collider[] = [];
+const firstFloorContactPropColliders: Collider[] = [];
+
+/**
+ * Solid footprints for the contact props on `floor`. Not every prop is in
+ * here: the wet floor's puddle is meant to be walked into, so it contributes
+ * nothing, which is exactly why "does it block" is a per-placement decision
+ * rather than something derived from the registry.
+ */
+export function getContactPropColliders(floor: Floor): Collider[] {
+  return floor === 'ground' ? groundContactPropColliders : firstFloorContactPropColliders;
+}
+
+function clearContactProps(floor: Floor): void {
+  for (let i = placedContactProps.length - 1; i >= 0; i--) {
+    if (placedContactProps[i].floor === floor) placedContactProps.splice(i, 1);
+  }
+  (floor === 'ground' ? groundContactPropColliders : firstFloorContactPropColliders).length = 0;
+}
+
+/** Rotates a prop-local (x, z) offset into world space — same transform the docks and the letters use. */
+function rotateLocal(x: number, z: number, rotationY: number): { x: number; z: number } {
+  const cos = Math.cos(rotationY);
+  const sin = Math.sin(rotationY);
+  return { x: x * cos + z * sin, z: -x * sin + z * cos };
+}
+
+function addContactProp(
+  group: THREE.Group,
+  floor: Floor,
+  spec: {
+    kind: ContactPropKind;
+    prop: ContactPropHandle;
+    placement: { x: number; y: number; z: number; rotationY: number };
+    footprint: number;
+    refractory: number;
+    fire: (mover: { x: number; y: number; z: number; sizeScale: number }) => void;
+    /** Local (x, z, radius) circles that block movement. Omitted means walk-through. */
+    colliders?: { x: number; z: number; radius: number }[];
+  },
+): void {
+  const { placement } = spec;
+  spec.prop.object.position.set(placement.x, placement.y, placement.z);
+  spec.prop.object.rotation.y = placement.rotationY;
+  group.add(spec.prop.object);
+
+  const list = floor === 'ground' ? groundContactPropColliders : firstFloorContactPropColliders;
+  for (const c of spec.colliders ?? []) {
+    const world = rotateLocal(c.x, c.z, placement.rotationY);
+    list.push({ x: placement.x + world.x, z: placement.z + world.z, radius: c.radius });
+  }
+
+  placedContactProps.push({
+    kind: spec.kind,
+    floor,
+    x: placement.x,
+    z: placement.z,
+    baseY: placement.y,
+    prop: spec.prop,
+    footprint: spec.footprint,
+    refractory: spec.refractory,
+    timer: 0,
+    fire: spec.fire,
+  });
+}
+
+/**
+ * Ticks every contact prop on `floor` and returns the kinds the mover set off
+ * this frame — Game.ts turns those into sounds and, for the wet floor, a stun,
+ * since this file can't import Robot.ts (Robot.ts imports plenty from here).
+ *
+ * Each prop has its own refractory window on top of its animation's `busy`
+ * flag. `busy` alone isn't enough for the wet floor: standing in the puddle
+ * would re-zap the instant the bolts died down, which is a stun-lock rather
+ * than a hazard.
+ */
+export function updateContactProps(
+  dt: number,
+  floor: Floor,
+  mover?: { x: number; y: number; z: number; sizeScale: number },
+): ContactPropKind[] {
+  const fired: ContactPropKind[] = [];
+  for (const placed of placedContactProps) {
+    if (placed.floor !== floor) continue;
+    placed.prop.update(dt);
+    if (placed.timer > 0) placed.timer = Math.max(0, placed.timer - dt);
+    if (!mover || placed.timer > 0 || placed.prop.busy) continue;
+    // Same height gate as the docks: a mover a storey up, or on a table
+    // overhead, isn't touching this.
+    if (Math.abs(mover.y - placed.baseY) > 1.0) continue;
+    const reach = placed.footprint + MOVER_CLEARANCE * mover.sizeScale;
+    const dx = mover.x - placed.x;
+    const dz = mover.z - placed.z;
+    if (dx * dx + dz * dz > reach * reach) continue;
+    placed.timer = placed.refractory;
+    placed.fire(mover);
+    fired.push(placed.kind);
+  }
+  return fired;
+}
+
+// Authored at 12cm — a real bath duck. At that size its collider would stop a
+// robot a body-width short of something he can barely see, which reads as
+// walking into thin air, so it's built at half a metre instead: the oversized
+// novelty duck a conference actually puts on the floor, big enough that
+// bumping into it is legible.
+const DUCK_SIZE = 0.5;
+const DUCK_FOOTPRINT = DUCK_SIZE * 0.7;
+const DUCK_REFRACTORY = 1.2; // a touch longer than the squeeze cycle, so brushing past doesn't machine-gun it
+
+function addRubberDuck(
+  group: THREE.Group,
+  floor: Floor,
+  placement: { x: number; y: number; z: number; rotationY: number },
+): void {
+  const duck = createRubberDuck({ size: DUCK_SIZE });
+  addContactProp(group, floor, {
+    kind: 'duck',
+    prop: duck,
+    placement,
+    footprint: DUCK_FOOTPRINT,
+    refractory: DUCK_REFRACTORY,
+    fire: () => {
+      if (!duck.busy) void duck.activate();
+    },
+    colliders: [{ x: 0, z: 0, radius: DUCK_SIZE * 0.55 }],
+  });
 }
 
 export function resetDevoxxLetters(): void {
@@ -2702,6 +2884,7 @@ export function createFirstFloor(): THREE.Group {
   const y = FLOOR_HEIGHT;
   clearDevoxxLetters('first'); // see createExhibitionHall's own reset
   clearChargingDocks('first');
+  clearContactProps('first');
   const hallWallHeight = 6; // end-caps only — CinematicHallway's own side walls use HALLWAY_CEILING_HEIGHT-derived scale
 
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x2e2b33 });
@@ -2859,6 +3042,12 @@ export function createFirstFloor(): THREE.Group {
   // from anywhere else to recover. Opposite strip from the midpoint dock, so
   // the two don't read as a repeated fixture down one side.
   addChargingDock(group, 'first', { x: hall.x + 8.5, y, z: -100, rotationY: 0 });
+
+  // A debugging duck out in the corridor, in the stretch the furniture declutter
+  // opened up (see furnitureClearZones) so it's a thing standing alone on an
+  // empty floor rather than another object in a crowded strip. 8.4m to the
+  // nearest collider.
+  addRubberDuck(group, 'first', { x: -19, y, z: -14, rotationY: 0.7 });
 
   // No DEVOXX letters along this corridor: a set stood in the left furniture
   // strip here for one pass, and the user cut it when the prop gained
