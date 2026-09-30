@@ -82,6 +82,20 @@ const QUOTE_DEFS: { pos: [number, number]; quoteId: KnowledgeQuoteId }[] = [
   { pos: [-46.7, -5.08], quoteId: 'architecture-legacy' }, // Room 4, row 5 (6 jumps deep)
   { pos: [-49.3, 6.39], quoteId: 'ai-confident-wrong' }, // Room 4, row 10 (11 jumps deep)
   { pos: [-48, 17.4], quoteId: 'technical-debt-loan' }, // Room 4, row 15 — the back row, 16 jumps deep (pulled in slightly from the tier's own raw edge — MOVER_CLEARANCE recesses the walkable zone short of it)
+  // Two nuggets that sit *on* something rather than on the floor. Neither
+  // needed new machinery: getFirstFloorHeightAt already resolves the stage
+  // surface and any hallway prop's top, so groundY comes out right and the
+  // pickup's own y-tolerance lines up with wherever the robot has to stand.
+  // Room 4's podium, beside the DEVOXX letters (which stand at x -48) and
+  // under the live-coding screen. The stage is 0.4m — over AUTO_STEP_HEIGHT,
+  // so it's a jump, and the stage's own colliders are height-gated at its top
+  // exactly like the seat rows, so the jump is what clears them.
+  { pos: [-40, -26.5], quoteId: 'live-coding-audience' },
+  // On a corridor table — the right-hand furniture row (x -0.4) at the slot
+  // local z -30, sitting between the z -62 and z -95 nuggets rather than
+  // crowding either. Table tops are jumpable by design (their colliders are
+  // height-gated), so this is the hall's equivalent of the podium one.
+  { pos: [-0.4, -79], quoteId: 'hallway-track' },
 ];
 const PICKUP_RADIUS = 1.4;
 // Tight tolerance, same as SwagRun's booth pickups — safe now that each
