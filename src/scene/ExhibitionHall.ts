@@ -3,6 +3,8 @@ import { CinematicHallway } from './CinematicHallway';
 import { createDevoxxLetters, DevoxxLetters } from '../props/devoxxLetters';
 import { createRobotChargingDock, RobotChargingDock } from '../props/robotChargingDock';
 import { createRubberDuck } from '../props/rubberDuck';
+import { createRecyclingStation } from '../props/recyclingBins';
+import { createTalkRatingKiosk } from '../props/talkRatingKiosk';
 import { EVENT_SIGNAGE, SPONSOR_SIGNAGE } from '../text/signage';
 
 // Rough blockout proportions from the real venue's floor plan
@@ -1685,6 +1687,70 @@ function addRubberDuck(
   });
 }
 
+// The three bins are 0.42m square across a 1.38m station, so one circle round
+// the lot would either swallow the gaps between them or leave a mover able to
+// stand inside an end bin. Three circles, one per bin, at the bins' own
+// spacing — the same reason the stage and the balustrades are circle rows
+// rather than one big radius.
+const BIN_SPACING = 0.48;
+const BIN_RADIUS = 0.3;
+const BINS_FOOTPRINT = BIN_SPACING + BIN_RADIUS; // out to the far edge of an end bin
+const BINS_REFRACTORY = 2.5;
+const BIN_TYPES = ['pmd', 'paper', 'rest'] as const;
+
+function addRecyclingBins(
+  group: THREE.Group,
+  floor: Floor,
+  placement: { x: number; y: number; z: number; rotationY: number },
+): void {
+  const bins = createRecyclingStation();
+  // Cycles the three bins rather than always feeding the same one, so
+  // repeatedly walking into the station doesn't look like only one flap works.
+  let next = 0;
+  addContactProp(group, floor, {
+    kind: 'bins',
+    prop: bins,
+    placement,
+    footprint: BINS_FOOTPRINT,
+    refractory: BINS_REFRACTORY,
+    fire: () => {
+      const type = BIN_TYPES[next % BIN_TYPES.length];
+      next++;
+      if (!bins.busy) void bins.activate(type);
+    },
+    colliders: BIN_TYPES.map((_, i) => ({ x: (i - 1) * BIN_SPACING, z: 0, radius: BIN_RADIUS })),
+  });
+}
+
+// The post is thin; the footprint that matters is the button panel you have to
+// reach, 0.52m wide, so the trigger reaches a little past the collider.
+const KIOSK_RADIUS = 0.26;
+const RATING_KIOSK_FOOTPRINT = 0.45;
+const RATING_KIOSK_REFRACTORY = 3;
+
+function addTalkRatingKiosk(
+  group: THREE.Group,
+  floor: Floor,
+  placement: { x: number; y: number; z: number; rotationY: number },
+): void {
+  const kiosk = createTalkRatingKiosk();
+  addContactProp(group, floor, {
+    kind: 'rating',
+    prop: kiosk,
+    placement,
+    footprint: RATING_KIOSK_FOOTPRINT,
+    refractory: RATING_KIOSK_REFRACTORY,
+    // Always the green button (the user: "when running into it, positive
+    // review should be left on it"). The kiosk can register 'ok' and 'bad'
+    // too, but nothing in the game ever asks it to — a robot that bumps into
+    // the post on its way out is, apparently, having a good conference.
+    fire: () => {
+      if (!kiosk.busy) void kiosk.activate('good');
+    },
+    colliders: [{ x: 0, z: 0, radius: KIOSK_RADIUS }],
+  });
+}
+
 export function resetDevoxxLetters(): void {
   for (const placed of placedDevoxxLetters) {
     placed.prop.reset();
@@ -3048,6 +3114,17 @@ export function createFirstFloor(): THREE.Group {
   // empty floor rather than another object in a crowded strip. 8.4m to the
   // nearest collider.
   addRubberDuck(group, 'first', { x: -19, y, z: -14, rotationY: 0.7 });
+
+  // The recycling station in the right-hand strip, turned to face the walking
+  // lane. -Math.PI/2, because the prop is authored facing +Z and the corridor
+  // centre is at -X from here.
+  addRecyclingBins(group, 'first', { x: -5.2, y, z: 2, rotationY: -Math.PI / 2 });
+
+  // The rating kiosk beside Room 4's doorway (the user: "should be put next to
+  // the open room"), on the near side of it rather than in it — the doorway's
+  // own walkable gap is z -26.5..-21.5, so this stands clear at -19 and faces
+  // the lane from the left strip.
+  addTalkRatingKiosk(group, 'first', { x: -24.5, y, z: -19, rotationY: Math.PI / 2 });
 
   // No DEVOXX letters along this corridor: a set stood in the left furniture
   // strip here for one pass, and the user cut it when the prop gained
