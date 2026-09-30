@@ -284,7 +284,7 @@ export function createBiggyMesh(): THREE.Object3D {
  * The low-poly stand-in for a robot, by id, plus the base scale to render it
  * at. Every robot has one now, not just Voxxy: a level transition used to
  * leave the *previous* robot's body on screen for the length of the next
- * one's download (10-34 MB per clip), so Level 2 could open with Voxxy
+ * one's download (a 10-23 MB base model), so Level 2 could open with Voxxy
  * standing in for Droid. Falls back to Voxxy's for an unknown id rather than
  * throwing — a missing stand-in should never be what stops the game starting.
  *

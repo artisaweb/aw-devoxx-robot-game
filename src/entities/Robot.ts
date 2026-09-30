@@ -406,7 +406,7 @@ export class Robot {
    * reasoning that a stand-in flash was worse than a brief mismatch — but with
    * every robot having a stand-in of its own, the mismatch is the worse of the
    * two: Level 2 opened with Voxxy playing Droid, and Level 3 with Droid
-   * playing Biggy, for however long 10-34 MB per clip takes to arrive. If the
+   * playing Biggy, for however long a 10-23 MB base model takes to arrive. If the
    * real model never arrives at all, the stand-in is simply what you play as.
    */
   private loadRobotModel(robotId: string): void {
@@ -1060,6 +1060,12 @@ export class Robot {
       }
       this.wasJumpDown = jumpDown;
     }
+    // Tracked through every branch above, not only the in-control one: a
+    // Space held when a stun or topple hit and released during it left this
+    // stale at true, so the first fresh press after recovering was
+    // swallowed. Holding Space through the whole stun still doesn't
+    // auto-jump on recovery.
+    this.wasJumpDown = input.isDown('Space');
 
     this.updateBoostVfx(dt, boosting);
 
