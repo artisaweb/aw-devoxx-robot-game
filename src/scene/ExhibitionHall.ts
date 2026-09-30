@@ -701,9 +701,17 @@ export function getHallwayPropColliders(): Collider[] {
 // of them (the normal zone height applies). Reuses getHallwayPropColliders()
 // rather than recomputing footprints a second way — same "one answer" reason
 // every other collider/height pair in this file shares a single source.
+//
+// Cached once per built hallway rather than rebuilt per call: this runs via
+// getFirstFloorHeightAt for the robot, the camera and every Level 2 hazard,
+// every frame, and rebuilding ~110 collider objects each time was pure garbage
+// for the collector on the phones and tablets the touch controls now target.
+// createFirstFloor() clears it whenever it (re)assigns hallwayInstance.
+let hallwayPropSurfaceColliders: Collider[] | null = null;
 function getHallwayPropSurfaceHeightAt(x: number, z: number): number | undefined {
+  if (!hallwayPropSurfaceColliders && hallwayInstance) hallwayPropSurfaceColliders = getHallwayPropColliders();
   let best: number | undefined;
-  for (const c of getHallwayPropColliders()) {
+  for (const c of hallwayPropSurfaceColliders ?? []) {
     if (c.height === undefined) continue;
     const dx = x - c.x;
     const dz = z - c.z;
@@ -3112,6 +3120,7 @@ export function createFirstFloor(): THREE.Group {
   hallway.position.set(hall.x, y, hall.z);
   group.add(hallway);
   hallwayInstance = hallway;
+  hallwayPropSurfaceColliders = null; // see getHallwayPropSurfaceHeightAt
 
   // Near end (Stairs A/B): a capped wall here reads as a real architectural
   // dead end, which isn't accurate — the user: "between room 3 and 10, the venue
