@@ -127,3 +127,6 @@ export const TOUCH_BUTTON_LABELS = { jump: 'JUMP', boost: 'BOOST', newDay: 'NEW 
 export function touchToggleLabel(on: boolean): string {
   return on ? '👆 Touch controls: ON' : '👆 Touch controls: OFF';
 }
+/** Phone-sized screens fold the minimap away behind this chip (see Hud.ts's applyMinimapLayout()). */
+export const MINIMAP_CHIP_LABEL = '🗺️ MAP';
+export const MINIMAP_TAP_TO_HIDE = 'Tap to hide the map';
