@@ -53,6 +53,14 @@ export { KING_KIOSK_POS };
 // MOVER_CLEARANCE = 43.8) — wide enough for each booth's own internal gaps to
 // work as a real hazard-evasion mechanic, not just a pickup-reachability
 // afterthought.
+
+// A standalone beer-tap stand — not tied to any of the 7 sponsor booths.
+// The user: real Devoxx has both a sponsor booth that gives away beer every
+// year AND an evening where the conference itself taps beer — this is a
+// generic stand-in for either, not a specific sponsor, matching this
+// project's own "a wink, not a reproduction" policy for real brands/venue
+// details. Placed in open floor clear of the
+// column grid, both stair enclosures, and every other booth/table.
 export const BEER_TAP_POS: [number, number] = [10, 15];
 // Built from the standalone beerTap.js generator (src/props/) — a full bar
 // setup on a 4.0x3.4m deck (counter, tap, two kegs, three stools, two high

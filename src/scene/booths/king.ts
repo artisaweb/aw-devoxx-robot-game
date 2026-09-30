@@ -19,9 +19,10 @@ import { mat, cssHex, createBoothSignTexture } from './shared';
 // Whole cluster shifted by (+10, 0) — the user: "move the king booth to the
 // outer wall." Backdrop's own +x extent (roughly cx+1.65 after rotation)
 // leaves 3.35m clear of the wall at x=45 (and the robot's own hard clamp
-// at x=43.8), while x=40 sits past the column grid's own last line (35),
-// same "booth in the wall-margin strip beyond the last column" pattern
-// Vaultius/every other booth already uses.
+// at x=43.8), while x=40 sits past the column grid's own last line (35), in
+// the wall-margin strip beyond it — the one booth out there, since the
+// others stand between gridlines at x≈±30 and Vaultius has since moved to
+// the front-center floor.
 export const KING_KIOSK_POS: [number, number] = [37, -4];
 export const KING_LION_POS: [number, number] = [40, -11];
 // Right column (x>0): -90° turns the booth's built-in +z front to face -x,

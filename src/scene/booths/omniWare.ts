@@ -188,11 +188,3 @@ export function createOmniWareBooth(): THREE.Object3D {
 
   return group;
 }
-
-// A standalone beer-tap stand — not tied to any of the 7 sponsor booths.
-// The user: real Devoxx has both a sponsor booth that gives away beer every
-// year AND an evening where the conference itself taps beer — this is a
-// generic stand-in for either, not a specific sponsor, matching this
-// project's own "a wink, not a reproduction" policy for real brands/venue
-// details. Placed in open floor clear of the
-// column grid, both stair enclosures, and every other booth/table.
