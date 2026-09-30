@@ -325,11 +325,16 @@ export class Game {
   private zapInPuddle(): void {
     playSfx('wet-floor-zap');
     if (this.level === 2) {
-      this.robot.topple(TOPPLE_DURATION, TOPPLE_RISE_DURATION);
-      this.robot.setInvincible(TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE);
-      setTimeout(() => {
-        if (this.level === 2) playSfx('droid-getup');
-      }, TOPPLE_DURATION * 1000);
+      // Booked on KnowledgeRun's own hit window first (see its
+      // registerExternalHit), same as level 3 below — otherwise an attendee
+      // could restart the topple while Droid is still getting up from the zap.
+      if (this.knowledgeRun!.registerExternalHit()) {
+        this.robot.topple(TOPPLE_DURATION, TOPPLE_RISE_DURATION);
+        this.robot.setInvincible(TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE);
+        setTimeout(() => {
+          if (this.level === 2) playSfx('droid-getup');
+        }, TOPPLE_DURATION * 1000);
+      }
     } else if (this.level === 3) {
       // Routed through LunchRush rather than stunning directly: level 3 ends on
       // three hits close together once Biggy is big enough, and that ledger
@@ -347,7 +352,8 @@ export class Game {
         this.robot.setInvincible(BIGGY_STUMBLE_DURATION + BIGGY_POST_STUN_GRACE);
       }
       if (growthToast) this.hud.showQuoteToast(growthToast);
-    } else {
+    } else if (this.swagRun!.registerExternalHit()) {
+      // Same booking as level 2 above, on SwagRun's own hit window.
       this.robot.stun(VOXXY_STUN_DURATION);
       this.robot.setInvincible(VOXXY_STUN_DURATION + VOXXY_POST_STUN_GRACE);
     }

@@ -447,6 +447,20 @@ export class KnowledgeRun {
     return this.nuggets;
   }
 
+  /**
+   * Books a topple that didn't come from an attendee — the wet floor's puddle
+   * (Game.ts's zapInPuddle) — on the same stunCooldown an attendee's own hit
+   * arms, so a hazard can't restart the topple while Droid is still down or
+   * getting up from the zap. Returns false, and the caller skips the topple,
+   * while a hit's window is still running — same contract as SwagRun's and
+   * LunchRush's registerExternalHit.
+   */
+  registerExternalHit(): boolean {
+    if (this.finished || this.stunCooldown > 0) return false;
+    this.stunCooldown = TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE;
+    return true;
+  }
+
   /** Advances the round; returns whether the robot toppled this frame (plus its deadpan toast), and any quote just collected. */
   update(dt: number, robot: Robot, colliders: Collider[]): { toppled: boolean; toppleToast?: string; collectedQuote?: string } {
     if (this.finished) return { toppled: false };

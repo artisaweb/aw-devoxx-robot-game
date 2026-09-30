@@ -320,6 +320,21 @@ export class SwagRun {
     return this.pickups;
   }
 
+  /**
+   * Books a hit that didn't come from an attendee — the wet floor's puddle
+   * (Game.ts's zapInPuddle) — on the same stunCooldown an attendee's own hit
+   * arms. Without it the zap stunned Voxxy with that window still open, so an
+   * attendee could land a second hit mid-zap (a fresh stun, and another piece
+   * of swag gone) — exactly what POST_STUN_GRACE exists to prevent. Returns
+   * false, and the caller skips the stun, while a hit's window is still
+   * running — same contract as LunchRush's registerExternalHit.
+   */
+  registerExternalHit(): boolean {
+    if (this.finished || this.stunCooldown > 0) return false;
+    this.stunCooldown = STUN_DURATION + POST_STUN_GRACE;
+    return true;
+  }
+
   /** Advances the round — returns whether the robot was just splashed by a hazard, and whether a pickup was just collected (for the SFX layer, see Game.ts). */
   update(dt: number, robot: Robot, colliders: Collider[], beerTap: BeerTap): { stunned: boolean; pickedUp: boolean; drankBeer?: boolean; rechargedFrom?: 'coffee' | 'candy' } {
     if (this.finished) return { stunned: false, pickedUp: false };
