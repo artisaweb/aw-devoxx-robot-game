@@ -170,6 +170,10 @@ export class Game {
     ...getLunchTableColliders(),
     ...getDevoxxLetterColliders('ground'), // same foyer letters as Level 1 — same ground floor, redressed
     ...getChargingDockColliders('ground'),
+    // The hall's duck is still standing at lunchtime (its puddle has no
+    // colliders) — without this, Biggy walked straight through it while it
+    // squeaked, the one ground-floor prop Level 3 had left out.
+    ...getContactPropColliders('ground'),
     { x: JAVA_MACHINE_POS[0], z: JAVA_MACHINE_POS[1], radius: KIOSK_COLLIDER_RADIUS },
     { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], radius: KIOSK_COLLIDER_RADIUS },
   ];
