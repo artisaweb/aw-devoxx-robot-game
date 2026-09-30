@@ -372,6 +372,7 @@ export class Game {
     this.knowledgeRun = new KnowledgeRun();
     this.scene.add(this.knowledgeRun.group);
     this.robot.setMap('first', { x: FIRST_FLOOR_SPAWN.x, y: FLOOR_HEIGHT, z: FIRST_FLOOR_SPAWN.z, heading: FIRST_FLOOR_SPAWN.heading });
+    this.followCamera.snapOnNextUpdate(); // cut, don't glide, to the new map
     this.robot.setRobotModel('droid');
     this.prevTimeRemaining = Infinity;
     this.prevEnergyFraction = 1;
@@ -396,6 +397,7 @@ export class Game {
     this.dayEndSummary = undefined; // a fresh Level 3 attempt hasn't ended yet
     this.scene.add(this.lunchRun.group);
     this.robot.reset();
+    this.followCamera.snapOnNextUpdate();
     this.robot.setRobotModel('biggy');
     this.robot.setInvincible(BIGGY_STUMBLE_DURATION + BIGGY_POST_STUN_GRACE);
     this.prevEnergyFraction = 1; // Level 3 has no timer, so only energy needs resetting here
@@ -426,6 +428,7 @@ export class Game {
     // there when Biggy comes through at lunchtime.
     resetDevoxxLetters();
     this.robot.reset();
+    this.followCamera.snapOnNextUpdate();
     this.robot.setRobotModel('voxxy');
     this.robot.setInvincible(VOXXY_STUN_DURATION + VOXXY_POST_STUN_GRACE);
     this.prevTimeRemaining = Infinity;

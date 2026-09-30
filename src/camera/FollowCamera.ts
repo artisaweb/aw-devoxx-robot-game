@@ -23,9 +23,21 @@ const MIN_CAMERA_DIST = 1.2; // never pull the camera closer to the character th
 export class FollowCamera {
   readonly camera: THREE.PerspectiveCamera;
   private raycaster = new THREE.Raycaster();
+  private snapNext = false;
 
   constructor(aspect: number) {
     this.camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 500);
+  }
+
+  /**
+   * Makes the next update() jump straight to the chase spot instead of
+   * gliding there. For level transitions, where the robot is relocated to
+   * another map: the glide from the previous level's spot took ~0.5s, and on
+   * the way into Level 2 it showed the laser fence up close behind the
+   * briefing panel.
+   */
+  snapOnNextUpdate(): void {
+    this.snapNext = true;
   }
 
   onResize(aspect: number): void {
@@ -102,7 +114,8 @@ export class FollowCamera {
       }
     }
 
-    const lerpFactor = 1 - Math.exp(-FOLLOW_RATE * dt);
+    const lerpFactor = this.snapNext ? 1 : 1 - Math.exp(-FOLLOW_RATE * dt);
+    this.snapNext = false;
     this.camera.position.lerp(desiredPos, lerpFactor);
 
     const lookAt = robot.position.clone().add(new THREE.Vector3(0, LOOK_HEIGHT, 0));
