@@ -19,10 +19,10 @@ npm install
 npm run dev       # Vite dev server
 npm run build     # tsc -b (typecheck) && vite build — this IS the type check; there's no separate lint/typecheck script
 npm run preview   # serve the production build locally
-npm run test:smoke  # Playwright: build + preview, then every level on desktop and phone
+npm run test:smoke  # Playwright: build + preview, then smoke + gameplay tests on desktop and phone
 ```
 
-No unit tests and no lint config exist in this repo. `npm run build` (via `tsc -b`, `strict: true`) is the type check; `npm run test:smoke` (`tests/smoke.spec.ts`) loads each level on a desktop and a phone viewport and fails on a stand-in model, a missing clip, a level that won't start or move, or any page error, console error or missing file. `@playwright/test` is pinned to 1.58.2 because each version drives one specific Chromium build.
+No unit tests and no lint config exist in this repo. `npm run build` (via `tsc -b`, `strict: true`) is the type check; `npm run test:smoke` runs `tests/*.spec.ts` on a desktop and a phone viewport: `smoke.spec.ts` loads each level and fails on a stand-in model, a missing clip, a level that won't start or move, or any page error, console error or missing file; `gameplay.spec.ts` plays a full day through the real transitions (Level 1 → 2 → 3 → day end → NEW DAY / R), plus pickups, jumping, the phone framing/resolution cap and the touch-controls switch. Tests drive the game through `window.__game` (localhost only) and shared helpers in `tests/helpers.ts`; a key must be held across a frame (the game diffs held keys per frame), so use down/wait/up, never `keyboard.press`. `@playwright/test` is pinned to 1.58.2 because each version drives one specific Chromium build.
 
 `tools/gen_sfx.py` regenerates `public/audio/*.wav` procedurally (oscillators/noise, no samples) — run with `python3 tools/gen_sfx.py` (needs only `numpy`) if a sound needs tuning.
 
