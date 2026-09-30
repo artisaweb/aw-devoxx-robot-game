@@ -78,10 +78,3 @@ brainstormed:
   a new movement path that bypasses the normal acceleration code.
 - **A temporary chase-immunity bubble:** the weakest fit. It removes the challenge instead of
   giving the player something to *do*, unlike every other pickup in the game.
-
-## Playtesting still to do
-
-- **Touch controls on real hardware.** They were built and tested in a desktop browser with
-  simulated touches. The feel of the stick (its dead zone and size) needs a pass on a real phone,
-  a tablet and a car screen. On an iPhone, check that the sound plays: iOS may block audio that
-  isn't started from a tap.
