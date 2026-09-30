@@ -1,6 +1,6 @@
 // All attendee/NPC speech-bubble copy lives here — one place to read and edit
 // text without touching rendering code (speechBubble.ts) or gameplay logic
-// (SwagRun.ts).
+// (SwagRun.ts, KnowledgeRun.ts, LunchRush.ts).
 //
 // Tone rule: everything here stays positive toward the event itself — no
 // complaints about Devoxx/the venue/the organization, no bad vibes, nothing
@@ -82,7 +82,7 @@ export const CONFUSED_REACTIONS = [
 // actually catching him.
 export const LUNCH_QUEUE_LINES = [
   "WHERE'S MY CRAB SANDWICH?!", // the flagship joke — they're famous and disappear fast
-  'WHO ATE ALL THE CRAB SANDWICHES?!', // griping about fellow attendees, not the event — and "classic" frames it as fond tradition, not a real complaint
+  'WHO ATE ALL THE CRAB SANDWICHES?!', // griping about fellow attendees, not the event
   'IS THAT ROBOT GETTING BIGGER?',
   'I SWEAR HE RUNS ON MAYONNAISE.',
   "HE'S HAD LIKE TEN OF THOSE ALREADY.",

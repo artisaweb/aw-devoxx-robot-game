@@ -3,7 +3,7 @@
 // attendeeDialogue.ts/robotToasts.ts/knowledgeQuotes.ts (this is mostly plain
 // status text, not jokes), but centralized here too so it's all
 // reviewable/translatable in one place. Consumed by src/ui/Hud.ts and (for
-// triggering each level's intro) src/core/Game.ts.
+// the on-screen buttons' own labels) src/input/TouchControls.ts.
 
 /** Per-level item/label/prompt copy — see Hud.ts's update() and buildDayEndHtml(). */
 export const LEVEL_COPY: Record<1 | 2 | 3, { itemLabel: string; collectedNoun: string; nextPrompt: string }> = {

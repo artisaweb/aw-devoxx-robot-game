@@ -1,14 +1,16 @@
 // Sponsor-booth backdrop copy (name + tagline, baked into a canvas texture —
-// see scene/sponsorBooths.ts's createXSignTexture()/createBannerTexture()
-// functions). Same "inspired by, never copied" rule as the robot
-// models; same tone rule as attendeeDialogue.ts — nothing here should read
-// as a real complaint about a real sponsor. Re-check every pass
-// "industry-wide humor" can still land as a genuine complaint about that specific sponsor.
+// see the create…SignTexture() functions in scene/booths/*.ts, and
+// createBoothSignTexture() in scene/booths/shared.ts). Same "inspired by,
+// never copied" rule as the robot models; same tone rule as
+// attendeeDialogue.ts — nothing here should read as a real complaint about a
+// real sponsor. Re-check every pass: "industry-wide humor" can still land as
+// a genuine complaint about that specific sponsor.
 
 // The event's own branding, as opposed to SPONSOR_SIGNAGE's fictional booth
-// tenants below: the real conference name, baked into Room 4's own dressing —
-// the standing letters and the branded AV flight case at the stage
-// (scene/ExhibitionHall.ts's buildAuditorium()). No date anywhere — same
+// tenants below: the real conference name — the standing letters (the
+// ground-floor foyer, and Room 4's stage deck) and the branded AV flight case
+// at the stage (scene/ExhibitionHall.ts's addDevoxxLetters() and
+// buildAuditorium()). No date anywhere — same
 // reason the hallway screen carries none: a printed year goes stale. The room
 // *number* isn't here: that's drawn straight from the floor plan by
 // CinematicHallway's roomNumberForSlot(), not authored copy.
