@@ -288,8 +288,12 @@ export function createBiggyMesh(): THREE.Object3D {
  * standing in for Droid. Falls back to Voxxy's for an unknown id rather than
  * throwing — a missing stand-in should never be what stops the game starting.
  *
- * Droid's and Biggy's are scaled to the exact height their .glb will land at,
- * so the swap when it arrives is invisible. Voxxy's deliberately isn't: it
+ * Droid's and Biggy's are scaled to their nominal ROBOT_HEIGHT. That is not
+ * quite what their .glb renders at: loadRobotAsset's re-bind after scaling
+ * applies the fit twice, so the real models stand at height² (Droid ~3.6m,
+ * Biggy ~2.6m) and the swap visibly grows them. Left as is — everything
+ * tuned by eye (sleepy bubble, swag spots, clearances) assumes the real
+ * models' current size, and the stand-ins only show while a model loads. Voxxy's deliberately isn't: it
  * predates the real models and things are tuned against its own proportions —
  * swagAccessories.ts's VOXXY_SPOTS anchor worn swag to it, Robot.ts's
  * SLEEPY_Y_PLACEHOLDER to its head height — so it keeps the size it has

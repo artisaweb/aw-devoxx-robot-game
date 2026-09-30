@@ -124,8 +124,8 @@ export class Game {
     { x: COFFEE_MACHINE_POS[0], z: COFFEE_MACHINE_POS[1], radius: KIOSK_COLLIDER_RADIUS },
     { x: KING_KIOSK_POS[0], z: KING_KIOSK_POS[1], radius: KIOSK_COLLIDER_RADIUS },
   ];
-  // AV carts/projector stands in the Level 2 corridor, the WiFi kiosk, and
-  // the jump-gated walls between Room 4's seating rows — the actual
+  // The two AV carts in the Level 2 corridor (OBSTACLE_DEFS), and the
+  // jump-gated walls between Room 4's seating rows — the actual
   // "parkour to reach the score bubble" mechanic (see
   // getAuditoriumRowWallColliders' own comment for why a wall, not a
   // height-gated platform, is what makes this genuinely require a jump).
@@ -375,7 +375,7 @@ export class Game {
     this.robot.setRobotModel('droid');
     this.prevTimeRemaining = Infinity;
     this.prevEnergyFraction = 1;
-    // Droid's own full topple cycle (~3.7s) — longer than Voxxy's/Biggy's, since
+    // Droid's own full topple cycle (4.2s) — longer than Voxxy's/Biggy's, since
     // a spawn-time hit costs exactly as much recovery time as a mid-round one.
     this.robot.setInvincible(TOPPLE_DURATION + TOPPLE_RISE_DURATION + POST_TOPPLE_GRACE);
     this.hud.showIntro(2);
