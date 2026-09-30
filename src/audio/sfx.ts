@@ -8,7 +8,10 @@ export type SfxName =
   | 'droid-getup'
   | 'biggy-fall'
   | 'beer-pour'
-  | 'biggy-burp';
+  | 'biggy-burp'
+  | 'coffee-pour'
+  | 'candy-drop'
+  | 'charge-up';
 
 const DEFAULT_VOLUME = 0.55;
 

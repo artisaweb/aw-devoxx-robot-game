@@ -209,6 +209,11 @@ export class Game {
   // value from whatever the previous level ended on.
   private prevTimeRemaining = Infinity;
   private prevEnergyFraction = 1;
+  // Whether the robot was standing on a charging pad last frame — the edge
+  // that fires charge-up.wav. Unlike the two fields above this one needs no
+  // per-level reset: a level transition relocates the robot off any pad, so
+  // the next frame's own `charge > 0` is already false.
+  private wasCharging = false;
 
   constructor(private container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -509,9 +514,15 @@ export class Game {
         sizeScale: this.robot.sizeScale,
       });
       if (charge > 0) this.robot.restoreEnergy(charge);
+      // One sound per visit to a pad, not one per frame: charging is a
+      // sustained action, so the rising edge of "earning charge" is the event,
+      // and stepping off and back on is a new one. Not gated on the level —
+      // the pads exist on both floors.
+      if (charge > 0 && !this.wasCharging) playSfx('charge-up');
+      this.wasCharging = charge > 0;
 
       if (this.level === 1) {
-        const { stunned, pickedUp, drankBeer } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);
+        const { stunned, pickedUp, drankBeer, rechargedFrom } = this.swagRun!.update(dt, this.robot, activeColliders, this.beerTap);
         if (stunned) {
           this.robot.stun(VOXXY_STUN_DURATION);
           // Purely visual — SwagRun.ts's own stunCooldown already blocks a
@@ -522,6 +533,7 @@ export class Game {
         }
         if (pickedUp) playSfx('pickup');
         if (drankBeer) playSfx('beer-pour');
+        if (rechargedFrom) playSfx(rechargedFrom === 'coffee' ? 'coffee-pour' : 'candy-drop');
         this.robot.setCarriedItemCount(this.swagRun!.score);
       } else if (this.level === 2) {
         // Hazards get the row-wall-free list (see firstFloorHazardColliders'
@@ -549,7 +561,7 @@ export class Game {
         }
         if (toppleToast) this.hud.showQuoteToast(toppleToast);
       } else {
-        const { stumbled, fell, growthToast, pickedUp, drankBeer } = this.lunchRun!.update(dt, this.robot, activeColliders, this.beerTap);
+        const { stumbled, fell, growthToast, pickedUp, drankBeer, rechargedFrom } = this.lunchRun!.update(dt, this.robot, activeColliders, this.beerTap);
         if (fell) {
           this.robot.fallOver();
           playSfx('biggy-fall');
@@ -570,6 +582,7 @@ export class Game {
           // double-burp.
           setTimeout(() => playSfx('biggy-burp'), BEER_POUR_DURATION * 1000);
         }
+        if (rechargedFrom) playSfx(rechargedFrom === 'coffee' ? 'coffee-pour' : 'candy-drop');
         if (growthToast) this.hud.showQuoteToast(growthToast);
       }
 
