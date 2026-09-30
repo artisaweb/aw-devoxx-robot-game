@@ -884,6 +884,22 @@ export class Robot {
     this.wasJumpDown = false;
     this.wasBoostDown = false;
     this.sleepyBubble.show('', 0); // clears hasMessage() so a stale bubble doesn't linger into the new level
+    // Everything below that update() alone shows or hides has to be put away
+    // here too: a level ends frozen (update() stops the frame it finishes)
+    // and the next one opens behind its intro panel on updateIdle(), which
+    // doesn't touch any of it. Left to update(), a Biggy who fell mid-boost
+    // or tipsy would carry his fire trail, orbiting bugs or a blank sleepy
+    // bubble into Voxxy's briefing, and a sandwich's squash-pop would stay
+    // baked into the next robot's scale until play started.
+    this.sleepyBubble.sprite.visible = false;
+    this.tipsyBugGroup.visible = false;
+    this.boostCore.visible = false;
+    this.boostSpawnAccum = 0;
+    for (const p of this.boostParticles) {
+      p.life = 0;
+      p.sprite.visible = false;
+    }
+    this.growPulseTimer = 0;
     this.stunTimer = 0;
     this.energy = ENERGY_MAX;
     this.canBoost = true;
