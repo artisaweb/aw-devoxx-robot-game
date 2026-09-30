@@ -19,15 +19,15 @@ const GOLD = 0xffd700;
 const BRONZE = 0xcd7f32;
 const DRONE_BODY_COLOR = 0x2c2c34;
 const DRONE_ACCENT_COLOR = 0xff6b35;
-// Matches createMiracleSignTexture's own red/gold in sponsorBooths.ts, not a
+// Matches createMiracleSignTexture's own red/gold in booths/miracleSystems.ts, not a
 // separately-invented racing palette.
 const MIRACLE_RED = 0xd90429;
 const MIRACLE_GOLD = 0xffb703;
-// Matches createGogglesProp's own desk-prop palette in sponsorBooths.ts —
+// Matches createGogglesProp's own desk-prop palette in booths/gogglesCloud.ts —
 // the worn goggles are meant to read as "the same pair," not a new design.
 const GOGGLES_GOLD = 0xfbbc05;
 const GOGGLES_LENS_BLUE = 0x8ab4f8;
-// Matches createTinyReachScreenTexture's own accent teal in sponsorBooths.ts.
+// Matches createTinyReachScreenTexture's own accent teal in booths/tinyReach.ts.
 const TINY_TEAL = 0x3aa8a0;
 
 // Soft radial falloff, reused across every world pickup's glow sprites — one
@@ -276,7 +276,7 @@ function buildCap(): THREE.Object3D {
 // A small chest-print texture — Tiny's own novelty-shirt joke ("ask me
 // about my [thing]" is a real t-shirt trope), riffing on its own
 // "TINY FOOTPRINT • NATIONAL SCALE" tagline (createTinyReachScreenTexture in
-// sponsorBooths.ts) rather than inventing an unrelated joke. Transparent
+// booths/tinyReach.ts) rather than inventing an unrelated joke. Transparent
 // background so it reads as printed text on fabric, not a patch.
 let tinyShirtTextTexture: THREE.CanvasTexture | null = null;
 function getTinyShirtTextTexture(): THREE.CanvasTexture {
@@ -295,7 +295,7 @@ function getTinyShirtTextTexture(): THREE.CanvasTexture {
   return tinyShirtTextTexture;
 }
 
-// Tiny's only signature item (see the confirmed pairing table) — teal to
+// Tiny's only signature item (see SwagRun.ts's SWAG_ITEM_DEFS) — teal to
 // match createTinyReachScreenTexture's own accent color, plus a chest print
 // of its own tagline joke, rather than a generic colored shirt.
 function buildShirt(radius: number): THREE.Object3D {
@@ -358,7 +358,7 @@ function buildShirt(radius: number): THREE.Object3D {
 
   return group;
 }
-// Goggles Cloud's only signature item (see the confirmed pairing table) — a
+// Goggles Cloud's only signature item (see SwagRun.ts's SWAG_ITEM_DEFS) — a
 // literal pair of goggles (gold rings, blue glass, elastic straps sweeping
 // back) matching createGogglesProp's own desk-prop palette, rather than a
 // flat black bar that reads as generic sunglasses regardless of sponsor.
@@ -442,7 +442,7 @@ function buildCrown(): THREE.Object3D {
 }
 
 // Vaultius's signature item — the same bronze key shape as its counter
-// display (createDisplayKey in sponsorBooths.ts), worn at a fixed angle
+// display (createDisplayKey in booths/vaultius.ts), worn at a fixed angle
 // rather than tracking a moving hand.
 function buildKey(): THREE.Object3D {
   const group = new THREE.Group();

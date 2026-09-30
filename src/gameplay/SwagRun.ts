@@ -30,7 +30,7 @@ import { randomGripe, randomHitReaction } from '../text/attendeeDialogue';
 // for.
 const SWAG_ITEM_DEFS: { pos: [number, number]; type: SwagType; groundY?: number }[] = [
   // Nearest generic pickup to Vaultius (-10, 18, moved again since — see
-  // its own comment in sponsorBooths.ts) — 'key' is Vaultius's signature
+  // its own comment in booths/vaultius.ts) — 'key' is Vaultius's signature
   // item, placed near it; 'cap' appears nowhere else but Miracle Systems'
   // own pickup below.
   { pos: [-13, 15], type: 'key' },
@@ -40,7 +40,7 @@ const SWAG_ITEM_DEFS: { pos: [number, number]; type: SwagType; groundY?: number 
   // pickup below instead, so the two types don't collide.
   { pos: [-31, 20.5], type: 'cap' },
   // Near the KING booth's own footprint (40, -11, moved to the outer wall —
-  // see its own comment in sponsorBooths.ts) — the glowing arch on its
+  // see its own comment in booths/king.ts) — the glowing arch on its
   // back wall advertises "swag here."
   { pos: [40, -14], type: 'sticker' },
   { pos: [40, -7], type: 'crown' }, // KING's signature item, replacing its old cap
